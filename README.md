@@ -1,5 +1,7 @@
 # SINEFIX - Film ve Dizi İzleme Platformu
 
+UYARI: BU PROJE YAPAY ZEKA DESTEĞİ KULLANILARAK GELİŞTİRİLMİŞTİR.
+
 Modern React teknolojileri ile geliştirilmiş, TMDB API kullanan Türkçe film ve dizi izleme platformu.
 
 ## 🚀 Özellikler
