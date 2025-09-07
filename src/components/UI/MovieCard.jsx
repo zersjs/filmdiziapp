@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { LazyLoadImage } from 'react-lazy-load-image-component';
-import { FaStar, FaHeart, FaFilm, FaTv } from 'react-icons/fa';
+import { FaStar, FaHeart, FaFilm, FaTv, FaClock, FaPlay } from 'react-icons/fa';
 import { getImageUrl } from '../../services/tmdb';
 import { formatRating, getYear, createSlug } from '../../utils/helpers';
 import { useApp } from '../../contexts';
@@ -14,6 +14,7 @@ const MovieCard = ({ item, mediaType = 'movie' }) => {
   const [imageError, setImageError] = useState(false);
 
   const isFavorite = actions.isFavorite(item.id, mediaType);
+  const isWatchLater = actions.isWatchLater(item.id, mediaType);
 
   const toggleFavorite = (e) => {
     e.preventDefault();
@@ -24,6 +25,18 @@ const MovieCard = ({ item, mediaType = 'movie' }) => {
       toast.success(isFavorite ? 'Favorilerden kaldırıldı' : 'Favorilere eklendi');
     } catch (error) {
       toast.error('Favori işlemi sırasında hata oluştu');
+    }
+  };
+
+  const toggleWatchLater = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    try {
+      actions.toggleWatchLater({ ...item, media_type: mediaType });
+      toast.success(isWatchLater ? 'İzleme listesinden kaldırıldı' : 'İzleme listesine eklendi');
+    } catch (error) {
+      toast.error('İzleme listesi işlemi sırasında hata oluştu');
     }
   };
 
@@ -55,15 +68,35 @@ const MovieCard = ({ item, mediaType = 'movie' }) => {
         )}
 
         {/* Overlay */}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+        <div className="absolute inset-0 bg-gradient-to-t from-black/90 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300">
           <div className="absolute bottom-0 left-0 right-0 p-3 text-white">
-            <h3 className="font-medium text-sm mb-1">{title}</h3>
-            <div className="flex items-center justify-between text-xs">
+            <h3 className="font-medium text-sm mb-2 line-clamp-2">{title}</h3>
+            <div className="flex items-center justify-between text-xs mb-2">
               <span>{getYear(releaseDate)}</span>
               <div className="flex items-center space-x-1">
                 <FaStar className="text-yellow-400" />
                 <span>{formatRating(item.vote_average)}</span>
               </div>
+            </div>
+            {/* Quick Action Buttons */}
+            <div className="flex items-center space-x-2">
+              <Link
+                to={`/watch/${mediaType}/${item.id}/${slug}`}
+                className="flex-1 flex items-center justify-center space-x-1 bg-white text-black px-2 py-1 rounded text-xs font-medium hover:bg-gray-200 transition-colors"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <FaPlay className="text-xs" />
+                <span>İzle</span>
+              </Link>
+              <button
+                onClick={toggleWatchLater}
+                className={`p-1.5 rounded transition-colors ${
+                  isWatchLater ? 'bg-blue-500 text-white' : 'bg-black/60 hover:bg-black/80 text-white'
+                }`}
+                title={isWatchLater ? 'İzleme listesinden kaldır' : 'İzleme listesine ekle'}
+              >
+                <FaClock className="text-xs" />
+              </button>
             </div>
           </div>
         </div>

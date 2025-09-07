@@ -3,7 +3,7 @@ import { Helmet } from 'react-helmet-async';
 import { Link } from 'react-router-dom';
 import { Swiper, SwiperSlide } from 'swiper/react';
 import { Autoplay, Pagination, Navigation } from 'swiper/modules';
-import { FaPlay, FaInfoCircle, FaStar, FaCalendar } from 'react-icons/fa';
+import { FaPlay, FaInfoCircle, FaStar, FaCalendar, FaFilm, FaTv, FaTimes } from 'react-icons/fa';
 import { movieService, tvService, trendingService, getImageUrl } from '../services/tmdb';
 import { formatRating, getYear, truncateText, createSlug } from '../utils/helpers';
 import { useApi } from '../hooks';
@@ -11,6 +11,7 @@ import { useApp } from '../contexts';
 import { useToast } from '../components/UI/Toast';
 import MovieCard from '../components/UI/MovieCard';
 import { SkeletonList, SkeletonDetail } from '../components/UI/Loading';
+import { HeroSkeleton, ContentSectionSkeleton, ContinueWatchingSkeleton } from '../components/UI/EnhancedSkeleton';
 
 // Import Swiper styles
 import 'swiper/css';
@@ -18,7 +19,7 @@ import 'swiper/css/pagination';
 import 'swiper/css/navigation';
 
 const Home = () => {
-  const { actions } = useApp();
+  const { state, actions } = useApp();
   const { toast } = useToast();
   const [featuredContent, setFeaturedContent] = useState(null);
 
@@ -152,7 +153,7 @@ const Home = () => {
   const topRatedMovies = topRatedData?.results || [];
   const upcomingMovies = upcomingData?.results || [];
 
-  if (loading) return <SkeletonDetail />;
+  if (loading) return <HeroSkeleton />;
 
   return (
     <>
@@ -180,62 +181,81 @@ const Home = () => {
               <div className="container-custom">
                 <div className="max-w-3xl">
                   {/* Kategori Badge */}
-                  <div className="flex items-center space-x-3 mb-4">
-                    <span className="px-3 py-1 bg-gray-800 text-white text-sm font-semibold rounded-full shadow-lg">
+                  <div className="flex items-center space-x-3 mb-4 animate-fade-in-left delay-100">
+                    <span className="px-4 py-2 bg-gradient-to-r from-gray-800 to-gray-900 text-white text-sm font-semibold rounded-full shadow-lg border border-white/10 backdrop-blur-sm">
                       {featuredContent.media_type === 'movie' ? '🎬 Film' : '📺 Dizi'}
                     </span>
-                    <span className="px-3 py-1 bg-black/40 backdrop-blur-sm text-white text-sm rounded-full border border-white/20">
-                      Günün İçeriği
+                    <span className="px-4 py-2 bg-gradient-to-r from-red-600/80 to-orange-600/80 backdrop-blur-sm text-white text-sm rounded-full border border-white/20 animate-bounce-subtle">
+                      ⭐ Günün İçeriği
                     </span>
                   </div>
 
                   {/* Başlık */}
-                  <h1 className="text-4xl md:text-7xl font-black mb-6 leading-tight text-white drop-shadow-2xl">
+                  <h1 className="text-4xl md:text-7xl font-black mb-6 leading-tight text-white drop-shadow-2xl animate-fade-in-up delay-200">
                     {featuredContent.title || featuredContent.name}
                   </h1>
                   
                   {/* Meta Bilgiler */}
-                  <div className="flex items-center space-x-6 mb-6 text-base">
-                    <div className="flex items-center space-x-2 bg-black/30 backdrop-blur-sm px-3 py-2 rounded-full">
-                      <FaStar className="text-white text-lg" />
+                  <div className="flex items-center space-x-6 mb-6 text-base animate-fade-in-left delay-300">
+                    <div className="flex items-center space-x-2 bg-black/40 backdrop-blur-md px-4 py-2.5 rounded-full border border-white/10 shadow-lg">
+                      <FaStar className="text-yellow-400 text-lg animate-pulse" />
                       <span className="font-bold text-white">{formatRating(featuredContent.vote_average)}</span>
                       <span className="text-gray-300 text-sm">/10</span>
                     </div>
                     
-                    <div className="flex items-center space-x-2 bg-black/30 backdrop-blur-sm px-3 py-2 rounded-full">
-                      <FaCalendar className="text-white" />
+                    <div className="flex items-center space-x-2 bg-black/40 backdrop-blur-md px-4 py-2.5 rounded-full border border-white/10 shadow-lg">
+                      <FaCalendar className="text-blue-400" />
                       <span className="font-semibold text-white">{getYear(featuredContent.release_date || featuredContent.first_air_date)}</span>
                     </div>
 
-                    <div className="hidden md:flex items-center space-x-2 bg-black/30 backdrop-blur-sm px-3 py-2 rounded-full">
-                      <span className="w-2 h-2 bg-white rounded-full animate-pulse"></span>
-                      <span className="text-white font-medium">HD Kalite</span>
+                    <div className="hidden md:flex items-center space-x-2 bg-black/40 backdrop-blur-md px-4 py-2.5 rounded-full border border-white/10 shadow-lg">
+                      <div className="relative">
+                        <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse block"></span>
+                        <span className="absolute top-0 left-0 w-2 h-2 bg-green-400 rounded-full animate-ping"></span>
+                      </div>
+                      <span className="text-white font-medium">4K HDR</span>
                     </div>
                   </div>
 
                   {/* Açıklama */}
-                  <p className="text-lg md:text-xl text-gray-200 mb-8 line-clamp-3 leading-relaxed font-light max-w-2xl">
+                  <p className="text-lg md:text-xl text-gray-200 mb-8 line-clamp-3 leading-relaxed font-light max-w-2xl animate-fade-in-up delay-400">
                     {featuredContent.overview}
                   </p>
 
                   {/* Action Buttons */}
-                  <div className="flex flex-col sm:flex-row space-y-3 sm:space-y-0 sm:space-x-4">
+                  <div className="flex flex-col sm:flex-row space-y-3 sm:space-y-0 sm:space-x-4 animate-slide-in-right delay-500">
                     <Link
                       to={`/watch/${featuredContent.media_type || 'movie'}/${featuredContent.id}/${createSlug(featuredContent.title || featuredContent.name)}`}
-                      className="group relative overflow-hidden bg-white text-black px-8 py-4 rounded-xl font-bold text-lg transition-all duration-300 transform hover:scale-105 hover:shadow-2xl hover:shadow-white/25 flex items-center justify-center space-x-3"
+                      className="group relative overflow-hidden bg-gradient-to-r from-white to-gray-100 text-black px-8 py-4 rounded-xl font-bold text-lg transition-all duration-300 transform hover:scale-105 hover:shadow-2xl hover:shadow-white/25 flex items-center justify-center space-x-3 border border-white/20"
                     >
-                      <div className="absolute inset-0 bg-gradient-to-r from-gray-100/0 via-gray-100/20 to-gray-100/0 transform -skew-x-12 -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
-                      <FaPlay className="text-xl relative z-10" />
+                      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent transform -skew-x-12 -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
+                      <FaPlay className="text-xl relative z-10 group-hover:scale-110 transition-transform" />
                       <span className="relative z-10">Hemen İzle</span>
                     </Link>
                     
                     <Link
                       to={`/${featuredContent.media_type || 'movie'}/${featuredContent.id}/${createSlug(featuredContent.title || featuredContent.name)}`}
-                      className="group bg-black/40 backdrop-blur-sm border-2 border-white/30 hover:border-white/60 text-white px-8 py-4 rounded-xl font-semibold text-lg transition-all duration-300 transform hover:scale-105 hover:bg-black/60 flex items-center justify-center space-x-3"
+                      className="group bg-black/40 backdrop-blur-md border-2 border-white/30 hover:border-white/60 text-white px-8 py-4 rounded-xl font-semibold text-lg transition-all duration-300 transform hover:scale-105 hover:bg-black/60 flex items-center justify-center space-x-3 shadow-lg"
                     >
                       <FaInfoCircle className="text-xl group-hover:rotate-12 transition-transform duration-300" />
                       <span>Detaylar</span>
                     </Link>
+                  </div>
+
+                  {/* Additional Info */}
+                  <div className="mt-8 flex items-center space-x-6 text-sm text-gray-400 animate-fade-in-up delay-600">
+                    <div className="flex items-center space-x-2">
+                      <span className="w-1 h-1 bg-gray-400 rounded-full"></span>
+                      <span>Türkçe Dublaj</span>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <span className="w-1 h-1 bg-gray-400 rounded-full"></span>
+                      <span>Türkçe Altyazı</span>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <span className="w-1 h-1 bg-gray-400 rounded-full"></span>
+                      <span>Reklamsız</span>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -246,6 +266,13 @@ const Home = () => {
 
       {/* İçerik Bölümleri */}
       <div className="container-custom py-12 space-y-12">
+        {/* Continue Watching */}
+        {state.continueWatching.length > 0 && (
+          <ContinueWatchingSection 
+            items={state.continueWatching}
+          />
+        )}
+
         {/* Trend Olanlar */}
         <ContentSection
           title="Trend Olanlar"
@@ -286,6 +313,93 @@ const Home = () => {
         />
       </div>
     </>
+  );
+};
+
+// Continue Watching bileşeni
+const ContinueWatchingSection = ({ items }) => {
+  return (
+    <section>
+      <div className="flex items-center justify-between mb-6">
+        <h2 className="text-2xl font-bold flex items-center space-x-3">
+          <FaPlay className="text-green-500" />
+          <span>İzlemeye Devam Et</span>
+        </h2>
+      </div>
+      
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {items.slice(0, 6).map((item) => (
+          <ContinueWatchingCard key={`${item.id}-${item.media_type}`} item={item} />
+        ))}
+      </div>
+    </section>
+  );
+};
+
+// Continue Watching Card bileşeni
+const ContinueWatchingCard = ({ item }) => {
+  const { actions } = useApp();
+  const title = item.title || item.name;
+  const slug = createSlug(title);
+  const posterUrl = item.poster_path ? getImageUrl(item.poster_path, 'w342') : null;
+  const watchPath = `/watch/${item.media_type}/${item.id}/${slug}`;
+
+  const removeFromContinueWatching = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    actions.removeContinueWatching(item.id, item.media_type);
+  };
+
+  return (
+    <Link to={watchPath} className="group block bg-gray-900 rounded-lg overflow-hidden hover:bg-gray-800 transition-colors">
+      <div className="flex">
+        {/* Poster */}
+        <div className="w-24 h-36 flex-shrink-0">
+          {posterUrl ? (
+            <img
+              src={posterUrl}
+              alt={title}
+              className="w-full h-full object-cover"
+            />
+          ) : (
+            <div className="w-full h-full bg-gray-800 flex items-center justify-center">
+              {item.media_type === 'movie' ? <FaFilm className="text-gray-500" /> : <FaTv className="text-gray-500" />}
+            </div>
+          )}
+        </div>
+        
+        {/* Content */}
+        <div className="flex-1 p-4 flex flex-col justify-between">
+          <div>
+            <h3 className="font-medium text-white mb-1 line-clamp-2">{title}</h3>
+            <p className="text-sm text-gray-400 mb-2">
+              {item.media_type === 'movie' ? 'Film' : 'Dizi'}
+              {item.season && item.episode && ` • S${item.season}E${item.episode}`}
+            </p>
+          </div>
+          
+          {/* Progress Bar */}
+          <div className="space-y-2">
+            <div className="flex items-center justify-between text-xs text-gray-400">
+              <span>{item.percentage}% tamamlandı</span>
+              <button
+                onClick={removeFromContinueWatching}
+                className="hover:text-white transition-colors"
+                title="Listeden kaldır"
+              >
+                <FaTimes />
+              </button>
+            </div>
+            <div className="w-full bg-gray-700 rounded-full h-1.5">
+              <div 
+                className="bg-green-500 h-1.5 rounded-full transition-all duration-300"
+                style={{ width: `${Math.min(item.percentage, 100)}%` }}
+              ></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </Link>
   );
 };
 
