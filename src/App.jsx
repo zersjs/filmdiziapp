@@ -15,6 +15,7 @@ import Search from './pages/Search';
 import Person from './pages/Person';
 import Genre from './pages/Genre';
 import Favorites from './pages/Favorites';
+import WatchLater from './pages/WatchLater';
 import Contact from './pages/Contact';
 import PrivacyPolicy from './pages/PrivacyPolicy';
 import Terms from './pages/Terms';
@@ -55,6 +56,7 @@ function App() {
                   <Route path="/person/:id" element={<Person />} />
                   <Route path="/genre/:type/:id" element={<Genre />} />
                   <Route path="/favorites" element={<Favorites />} />
+                  <Route path="/watch-later" element={<WatchLater />} />
                   <Route path="/iletisim" element={<Contact />} />
                   <Route path="/gizlilik-politikasi" element={<PrivacyPolicy />} />
                   <Route path="/kullanim-kosullari" element={<Terms />} />

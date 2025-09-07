@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Çevrimdışı - SINEFIX</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: linear-gradient(135deg, #000000 0%, #1a1a1a 100%);
+      color: white;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    
+    .container {
+      text-align: center;
+      max-width: 500px;
+      padding: 2rem;
+    }
+    
+    .logo {
+      font-size: 2.5rem;
+      font-weight: 900;
+      margin-bottom: 2rem;
+      letter-spacing: -0.02em;
+    }
+    
+    .logo .sine {
+      color: white;
+    }
+    
+    .logo .fix {
+      color: #6b7280;
+    }
+    
+    .offline-icon {
+      width: 120px;
+      height: 120px;
+      margin: 0 auto 2rem;
+      background: #374151;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 3rem;
+    }
+    
+    h1 {
+      font-size: 2rem;
+      margin-bottom: 1rem;
+      font-weight: 700;
+    }
+    
+    p {
+      color: #9ca3af;
+      line-height: 1.6;
+      margin-bottom: 2rem;
+    }
+    
+    .retry-btn {
+      background: white;
+      color: black;
+      border: none;
+      padding: 1rem 2rem;
+      border-radius: 0.75rem;
+      font-weight: 600;
+      font-size: 1rem;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    
+    .retry-btn:hover {
+      background: #f3f4f6;
+      transform: translateY(-2px);
+    }
+    
+    .features {
+      margin-top: 3rem;
+      text-align: left;
+    }
+    
+    .feature {
+      display: flex;
+      align-items: center;
+      margin-bottom: 1rem;
+      color: #d1d5db;
+    }
+    
+    .feature-icon {
+      width: 20px;
+      height: 20px;
+      margin-right: 12px;
+      color: #10b981;
+    }
+    
+    @media (max-width: 640px) {
+      .container {
+        padding: 1rem;
+      }
+      
+      .logo {
+        font-size: 2rem;
+      }
+      
+      h1 {
+        font-size: 1.5rem;
+      }
+      
+      .offline-icon {
+        width: 80px;
+        height: 80px;
+        font-size: 2rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="logo">
+      <span class="sine">SINE</span><span class="fix">FIX</span>
+    </div>
+    
+    <div class="offline-icon">
+      📡
+    </div>
+    
+    <h1>İnternet Bağlantısı Yok</h1>
+    <p>
+      Şu anda çevrimdışısınız. İnternet bağlantınızı kontrol edin ve tekrar deneyin.
+      Bazı içerikler önbellekte mevcut olabilir.
+    </p>
+    
+    <button class="retry-btn" onclick="window.location.reload()">
+      Tekrar Dene
+    </button>
+    
+    <div class="features">
+      <div class="feature">
+        <div class="feature-icon">✓</div>
+        <span>Favorileriniz yerel olarak saklanır</span>
+      </div>
+      <div class="feature">
+        <div class="feature-icon">✓</div>
+        <span>İzleme listeniz korunur</span>
+      </div>
+      <div class="feature">
+        <div class="feature-icon">✓</div>
+        <span>Ayarlarınız kayıtlı kalır</span>
+      </div>
+    </div>
+  </div>
+  
+  <script>
+    // Check for connection periodically
+    function checkConnection() {
+      if (navigator.onLine) {
+        window.location.href = '/';
+      }
+    }
+    
+    // Check every 5 seconds
+    setInterval(checkConnection, 5000);
+    
+    // Listen for online event
+    window.addEventListener('online', () => {
+      window.location.href = '/';
+    });
+    
+    // Add some animation
+    document.addEventListener('DOMContentLoaded', () => {
+      const container = document.querySelector('.container');
+      container.style.opacity = '0';
+      container.style.transform = 'translateY(20px)';
+      
+      setTimeout(() => {
+        container.style.transition = 'all 0.5s ease-out';
+        container.style.opacity = '1';
+        container.style.transform = 'translateY(0)';
+      }, 100);
+    });
+  </script>
+</body>
+</html>

@@ -5,7 +5,9 @@ import { useLocalStorage } from '../hooks/useLocalStorage';
 const initialState = {
   user: null,
   favorites: [],
+  watchLater: [],
   watchHistory: [],
+  continueWatching: [],
   settings: {
     theme: 'dark',
     language: 'tr',
@@ -35,11 +37,23 @@ export const ActionTypes = {
   SET_FAVORITES: 'SET_FAVORITES',
   CLEAR_FAVORITES: 'CLEAR_FAVORITES',
   
+  // Watch Later actions
+  ADD_WATCH_LATER: 'ADD_WATCH_LATER',
+  REMOVE_WATCH_LATER: 'REMOVE_WATCH_LATER',
+  SET_WATCH_LATER: 'SET_WATCH_LATER',
+  CLEAR_WATCH_LATER: 'CLEAR_WATCH_LATER',
+  
   // Watch history actions
   ADD_TO_HISTORY: 'ADD_TO_HISTORY',
   REMOVE_FROM_HISTORY: 'REMOVE_FROM_HISTORY',
   CLEAR_HISTORY: 'CLEAR_HISTORY',
   SET_HISTORY: 'SET_HISTORY',
+  
+  // Continue Watching actions
+  ADD_CONTINUE_WATCHING: 'ADD_CONTINUE_WATCHING',
+  REMOVE_CONTINUE_WATCHING: 'REMOVE_CONTINUE_WATCHING',
+  SET_CONTINUE_WATCHING: 'SET_CONTINUE_WATCHING',
+  UPDATE_CONTINUE_WATCHING: 'UPDATE_CONTINUE_WATCHING',
   
   // Settings actions
   UPDATE_SETTING: 'UPDATE_SETTING',
@@ -97,6 +111,34 @@ const appReducer = (state, action) => {
         favorites: []
       };
       
+    case ActionTypes.ADD_WATCH_LATER:
+      return {
+        ...state,
+        watchLater: [...state.watchLater.filter(w => 
+          !(w.id === action.payload.id && w.media_type === action.payload.media_type)
+        ), action.payload]
+      };
+      
+    case ActionTypes.REMOVE_WATCH_LATER:
+      return {
+        ...state,
+        watchLater: state.watchLater.filter(w => 
+          !(w.id === action.payload.id && w.media_type === action.payload.mediaType)
+        )
+      };
+      
+    case ActionTypes.SET_WATCH_LATER:
+      return {
+        ...state,
+        watchLater: action.payload
+      };
+      
+    case ActionTypes.CLEAR_WATCH_LATER:
+      return {
+        ...state,
+        watchLater: []
+      };
+      
     case ActionTypes.ADD_TO_HISTORY:
       const filteredHistory = state.watchHistory.filter(h => 
         !(h.id === action.payload.id && h.media_type === action.payload.media_type)
@@ -124,6 +166,39 @@ const appReducer = (state, action) => {
       return {
         ...state,
         watchHistory: action.payload
+      };
+      
+    case ActionTypes.ADD_CONTINUE_WATCHING:
+      const filteredContinueWatching = state.continueWatching.filter(c => 
+        !(c.id === action.payload.id && c.media_type === action.payload.media_type)
+      );
+      return {
+        ...state,
+        continueWatching: [action.payload, ...filteredContinueWatching].slice(0, 20)
+      };
+      
+    case ActionTypes.REMOVE_CONTINUE_WATCHING:
+      return {
+        ...state,
+        continueWatching: state.continueWatching.filter(c => 
+          !(c.id === action.payload.id && c.media_type === action.payload.mediaType)
+        )
+      };
+      
+    case ActionTypes.SET_CONTINUE_WATCHING:
+      return {
+        ...state,
+        continueWatching: action.payload
+      };
+      
+    case ActionTypes.UPDATE_CONTINUE_WATCHING:
+      return {
+        ...state,
+        continueWatching: state.continueWatching.map(c => 
+          c.id === action.payload.id && c.media_type === action.payload.media_type
+            ? { ...c, ...action.payload }
+            : c
+        )
       };
       
     case ActionTypes.UPDATE_SETTING:
@@ -207,13 +282,17 @@ const AppContext = createContext();
 export const AppProvider = ({ children }) => {
   const [state, dispatch] = useReducer(appReducer, initialState);
   const [favorites, setFavorites] = useLocalStorage('favorites', []);
+  const [watchLater, setWatchLater] = useLocalStorage('watchLater', []);
   const [watchHistory, setWatchHistory] = useLocalStorage('watchHistory', []);
+  const [continueWatching, setContinueWatching] = useLocalStorage('continueWatching', []);
   const [settings, setSettings] = useLocalStorage('userSettings', initialState.settings);
 
   // LocalStorage'dan veri yükle
   useEffect(() => {
     dispatch({ type: ActionTypes.SET_FAVORITES, payload: favorites });
+    dispatch({ type: ActionTypes.SET_WATCH_LATER, payload: watchLater });
     dispatch({ type: ActionTypes.SET_HISTORY, payload: watchHistory });
+    dispatch({ type: ActionTypes.SET_CONTINUE_WATCHING, payload: continueWatching });
     dispatch({ type: ActionTypes.UPDATE_SETTING, payload: { key: 'settings', value: settings } });
   }, []);
 
@@ -222,10 +301,20 @@ export const AppProvider = ({ children }) => {
     setFavorites(state.favorites);
   }, [state.favorites, setFavorites]);
 
+  // Watch Later değiştiğinde localStorage'a kaydet
+  useEffect(() => {
+    setWatchLater(state.watchLater);
+  }, [state.watchLater, setWatchLater]);
+
   // Watch history değiştiğinde localStorage'a kaydet
   useEffect(() => {
     setWatchHistory(state.watchHistory);
   }, [state.watchHistory, setWatchHistory]);
+
+  // Continue Watching değiştiğinde localStorage'a kaydet
+  useEffect(() => {
+    setContinueWatching(state.continueWatching);
+  }, [state.continueWatching, setContinueWatching]);
 
   // Settings değiştiğinde localStorage'a kaydet
   useEffect(() => {
@@ -270,6 +359,38 @@ export const AppProvider = ({ children }) => {
       }
     },
     
+    // Watch Later actions
+    addWatchLater: (item) => {
+      const watchLaterItem = {
+        id: item.id,
+        title: item.title || item.name,
+        poster_path: item.poster_path,
+        media_type: item.media_type || 'movie',
+        vote_average: item.vote_average,
+        release_date: item.release_date || item.first_air_date,
+        overview: item.overview,
+        addedAt: new Date().toISOString()
+      };
+      dispatch({ type: ActionTypes.ADD_WATCH_LATER, payload: watchLaterItem });
+    },
+    
+    removeWatchLater: (id, mediaType) => 
+      dispatch({ type: ActionTypes.REMOVE_WATCH_LATER, payload: { id, mediaType } }),
+    
+    clearWatchLater: () => dispatch({ type: ActionTypes.CLEAR_WATCH_LATER }),
+    
+    isWatchLater: (id, mediaType) => 
+      state.watchLater.some(w => w.id === id && w.media_type === mediaType),
+    
+    toggleWatchLater: (item) => {
+      const mediaType = item.media_type || 'movie';
+      if (actions.isWatchLater(item.id, mediaType)) {
+        actions.removeWatchLater(item.id, mediaType);
+      } else {
+        actions.addWatchLater(item);
+      }
+    },
+    
     // Watch history actions
     addToHistory: (item) => {
       const historyItem = {
@@ -288,6 +409,38 @@ export const AppProvider = ({ children }) => {
       dispatch({ type: ActionTypes.REMOVE_FROM_HISTORY, payload: { id, mediaType } }),
     
     clearHistory: () => dispatch({ type: ActionTypes.CLEAR_HISTORY }),
+    
+    // Continue Watching actions
+    addContinueWatching: (item, progress = 0, duration = 0) => {
+      const continueWatchingItem = {
+        id: item.id,
+        title: item.title || item.name,
+        poster_path: item.poster_path,
+        media_type: item.media_type || 'movie',
+        progress: progress, // in seconds
+        duration: duration, // in seconds
+        percentage: duration > 0 ? Math.round((progress / duration) * 100) : 0,
+        lastWatchedAt: new Date().toISOString(),
+        season: item.season,
+        episode: item.episode
+      };
+      dispatch({ type: ActionTypes.ADD_CONTINUE_WATCHING, payload: continueWatchingItem });
+    },
+    
+    removeContinueWatching: (id, mediaType) => 
+      dispatch({ type: ActionTypes.REMOVE_CONTINUE_WATCHING, payload: { id, mediaType } }),
+    
+    updateContinueWatching: (id, mediaType, progress, duration) => {
+      const payload = {
+        id,
+        media_type: mediaType,
+        progress,
+        duration,
+        percentage: duration > 0 ? Math.round((progress / duration) * 100) : 0,
+        lastWatchedAt: new Date().toISOString()
+      };
+      dispatch({ type: ActionTypes.UPDATE_CONTINUE_WATCHING, payload });
+    },
     
     // Settings actions
     updateSetting: (key, value) => 

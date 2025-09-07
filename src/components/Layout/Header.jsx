@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { FaSearch, FaBars, FaTimes, FaHeart, FaFilm, FaTv, FaHome } from 'react-icons/fa';
+import { FaSearch, FaBars, FaTimes, FaHeart, FaFilm, FaTv, FaHome, FaClock } from 'react-icons/fa';
 import { useApp } from '../../contexts';
 import { useSearchDebounce, useScrollPosition } from '../../hooks';
 import SearchModal from '../UI/SearchModal';
@@ -16,6 +16,7 @@ const Header = () => {
   
   const isScrolled = scrollPosition.y > 10;
   const favoritesCount = state.favorites.length;
+  const watchLaterCount = state.watchLater.length;
 
   // Ctrl+K shortcut for search
   useEffect(() => {
@@ -49,6 +50,12 @@ const Header = () => {
       label: 'Favorilerim', 
       icon: <FaHeart />,
       badge: favoritesCount > 0 ? favoritesCount : null
+    },
+    { 
+      path: '/watch-later', 
+      label: 'İzleme Listem', 
+      icon: <FaClock />,
+      badge: watchLaterCount > 0 ? watchLaterCount : null
     },
   ];
 
