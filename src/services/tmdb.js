@@ -1,13 +1,20 @@
 import axios from 'axios';
 
-const API_KEY = import.meta.env.VITE_TMDB_API_KEY;
-const BASE_URL = import.meta.env.VITE_TMDB_BASE_URL;
-const IMAGE_BASE_URL = import.meta.env.VITE_TMDB_IMAGE_BASE_URL;
+const API_KEY = import.meta.env.VITE_TMDB_API_KEY || '095262b2872d2235d6da623056c10cd9';
+const ACCESS_TOKEN =
+  import.meta.env.VITE_TMDB_ACCESS_TOKEN ||
+  'eyJhbGciOiJIUzI1NiJ9.eyJhdWQiOiIwOTUyNjJiMjg3MmQyMjM1ZDZkYTYyMzA1NmMxMGNkOSIsIm5iZiI6MTY3OTE0ODgzMy41NjksInN1YiI6IjY0MTVjNzIxMGQ1ZDg1MDA5YmExOGYxOSIsInNjb3BlcyI6WyJhcGlfcmVhZCJdLCJ2ZXJzaW9uIjoxfQ.PVQYPczKDgevfrrgQyE52x7xJj0wSHUZpI6KE0Z1xGo';
+const BASE_URL = import.meta.env.VITE_TMDB_BASE_URL || 'https://api.themoviedb.org/3';
+const IMAGE_BASE_URL = import.meta.env.VITE_TMDB_IMAGE_BASE_URL || 'https://image.tmdb.org/t/p';
 
 const tmdbApi = axios.create({
   baseURL: BASE_URL,
+  headers: {
+    Authorization: `Bearer ${ACCESS_TOKEN}`,
+    'Content-Type': 'application/json;charset=utf-8'
+  },
   params: {
-    api_key: API_KEY,
+    ...(API_KEY ? { api_key: API_KEY } : {}),
     language: 'tr-TR'
   }
 });
