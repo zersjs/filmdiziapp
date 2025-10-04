@@ -1,22 +1,31 @@
 import React, { useState, useEffect } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { Link } from 'react-router-dom';
-import { Swiper, SwiperSlide } from 'swiper/react';
-import { Autoplay, Pagination, Navigation } from 'swiper/modules';
-import { FaPlay, FaInfoCircle, FaStar, FaCalendar, FaFilm, FaTv, FaTimes } from 'react-icons/fa';
+import { FaFilm, FaTv, FaTimes, FaPlay } from 'react-icons/fa';
 import { movieService, tvService, trendingService, getImageUrl } from '../services/tmdb';
 import { formatRating, getYear, truncateText, createSlug } from '../utils/helpers';
 import { useApi } from '../hooks';
 import { useApp } from '../contexts';
 import { useToast } from '../components/UI/Toast';
 import MovieCard from '../components/UI/MovieCard';
-import { SkeletonList, SkeletonDetail } from '../components/UI/Loading';
-import { HeroSkeleton, ContentSectionSkeleton, ContinueWatchingSkeleton } from '../components/UI/EnhancedSkeleton';
+import { HeroSkeleton } from '../components/UI/EnhancedSkeleton';
 
-// Import Swiper styles
-import 'swiper/css';
-import 'swiper/css/pagination';
-import 'swiper/css/navigation';
+const createAccentPalette = (voteAverage = 0, popularity = 0) => {
+  const normalizedVote = Math.min(Math.max(voteAverage || 0, 0), 10) / 10;
+  const normalizedPopularity = Math.min(Math.max(popularity || 0, 0), 1000) / 1000;
+
+  const baseHue = 210 - normalizedVote * 55;
+  const lightness = 18 + normalizedPopularity * 15;
+  const saturation = 65 + normalizedVote * 20;
+  const ctaStrength = 0.32 + normalizedPopularity * 0.28;
+
+  return {
+    accent: `hsla(${baseHue}, ${Math.min(saturation, 95)}%, ${Math.min(lightness + 12, 45)}%, 1)`,
+    soft: `hsla(${baseHue}, ${Math.min(saturation - 20, 80)}%, ${Math.min(lightness + 4, 36)}%, 0.28)`,
+    border: `hsla(${baseHue}, ${Math.min(saturation, 95)}%, ${Math.min(lightness + 10, 40)}%, 0.55)`,
+    cta: `hsla(${baseHue}, ${Math.min(saturation, 95)}%, ${Math.min(lightness + 8, 42)}%, ${Math.min(ctaStrength, 0.75)})`
+  };
+};
 
 const Home = () => {
   const { state, actions } = useApp();
@@ -73,7 +82,6 @@ const Home = () => {
     const selectFeaturedContent = () => {
       // Gelişmiş içerik seçim algoritması
       const today = new Date();
-      const dailySeed = today.getFullYear() * 10000 + (today.getMonth() + 1) * 100 + today.getDate();
       
       // 1. İçerikleri puanlama kriterleriyle değerlendir
       const evaluateContent = (item) => {
@@ -136,8 +144,9 @@ const Home = () => {
 
       // 5. Günlük rotasyon için top 10'dan seç
       const topContent = scoredContent.slice(0, 10);
-      const rotationIndex = dailySeed % topContent.length;
-      
+      const rotationIndex =
+        topContent.length > 0 ? Math.floor(Math.random() * topContent.length) : 0;
+
       return topContent[rotationIndex] || scoredContent[0] || trendingData.results[0];
     };
 
@@ -155,6 +164,64 @@ const Home = () => {
 
   if (loading) return <HeroSkeleton />;
 
+  const heroPalette = featuredContent
+    ? createAccentPalette(featuredContent.vote_average, featuredContent.popularity)
+    : null;
+
+  const heroOverlayStyle = {
+    backgroundImage:
+      'linear-gradient(120deg, rgba(0,0,0,0.96) 0%, rgba(0,0,0,0.9) 55%, rgba(0,0,0,0.98) 100%)'
+  };
+
+  const heroAccentOverlayStyle = heroPalette
+    ? {
+        backgroundImage: `radial-gradient(circle at 18% 18%, ${heroPalette.soft} 0%, transparent 55%), radial-gradient(circle at 78% 22%, ${heroPalette.soft} 0%, transparent 60%)`
+      }
+    : {};
+
+  const accentShadowColor = heroPalette?.accent
+    ? heroPalette.accent.replace(', 1)', ', 0.35)')
+    : undefined;
+
+  const mediaLabel = featuredContent
+    ? [
+        featuredContent.media_type === 'movie' ? 'Film' : 'Dizi',
+        getYear(featuredContent.release_date || featuredContent.first_air_date),
+        featuredContent.original_language?.toUpperCase()
+      ]
+        .filter(Boolean)
+        .join(' • ')
+    : '';
+
+  const overviewText = featuredContent?.overview
+    ? truncateText(featuredContent.overview, 220)
+    : 'Bu içerik için detaylar henüz TMDB tarafından paylaşılmadı.';
+
+  const metrics = featuredContent
+    ? [
+        {
+          label: featuredContent.media_type === 'movie' ? 'Puan' : 'Bölüm Puanı',
+          value: formatRating(featuredContent.vote_average),
+          description: `${featuredContent.vote_count?.toLocaleString('tr-TR') || '0'} oy`
+        },
+        {
+          label: featuredContent.media_type === 'movie' ? 'Vizyon Yılı' : 'İlk Yayın',
+          value: getYear(featuredContent.release_date || featuredContent.first_air_date),
+          description: new Date(
+            featuredContent.release_date || featuredContent.first_air_date || Date.now()
+          ).toLocaleDateString('tr-TR', { dateStyle: 'long' })
+        },
+        {
+          label: 'Popülerlik',
+          value: Math.round(featuredContent.popularity || 0),
+          description: 'TMDB trend skoru'
+        }
+      ]
+    : [];
+
+  const primaryCta = featuredContent?.media_type === 'tv' ? 'Diziyi İzle' : 'Filmi İzle';
+  const secondaryCta = featuredContent?.media_type === 'tv' ? 'Bölümlere Git' : 'Detayları Gör';
+
   return (
     <>
       <Helmet>
@@ -164,99 +231,103 @@ const Home = () => {
 
       {/* Hero Section */}
       {featuredContent && (
-        <section className="relative h-[85vh] min-h-[700px] overflow-hidden">
-          <div className="relative h-full">
-            {/* Arka plan resmi */}
-            <div className="absolute inset-0">
-              <img
-                src={getImageUrl(featuredContent.backdrop_path, 'original')}
-                alt={featuredContent.title || featuredContent.name}
-                className="w-full h-full object-cover"
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-black via-black/50 to-transparent" />
-              <div className="absolute inset-0 bg-gradient-to-r from-black via-transparent to-transparent" />
-            </div>
-            {/* İçerik */}
-            <div className="relative h-full flex items-center">
-              <div className="container-custom">
-                <div className="max-w-3xl">
-                  {/* Kategori Badge */}
-                  <div className="flex items-center space-x-3 mb-4 animate-fade-in-left delay-100">
-                    <span className="px-4 py-2 bg-gradient-to-r from-gray-800 to-gray-900 text-white text-sm font-semibold rounded-full shadow-lg border border-white/10 backdrop-blur-sm">
-                      {featuredContent.media_type === 'movie' ? '🎬 Film' : '📺 Dizi'}
-                    </span>
-                    <span className="px-4 py-2 bg-gradient-to-r from-red-600/80 to-orange-600/80 backdrop-blur-sm text-white text-sm rounded-full border border-white/20 animate-bounce-subtle">
-                      ⭐ Günün İçeriği
-                    </span>
-                  </div>
+        <section className="relative min-h-[70vh] md:min-h-[80vh] overflow-hidden bg-black text-white">
+          <div className="absolute inset-0 bg-black">
+            <img
+              src={getImageUrl(featuredContent.backdrop_path, 'original')}
+              alt={featuredContent.title || featuredContent.name}
+              className="h-full w-full object-cover opacity-60"
+            />
+            <div className="absolute inset-0 bg-gradient-to-br from-black via-black/90 to-black" />
+            {heroPalette && (
+              <div className="absolute inset-0 opacity-70" style={heroAccentOverlayStyle} />
+            )}
+            <div className="absolute inset-0" style={heroOverlayStyle} />
+          </div>
 
-                  {/* Başlık */}
-                  <h1 className="text-4xl md:text-7xl font-black mb-6 leading-tight text-white drop-shadow-2xl animate-fade-in-up delay-200">
-                    {featuredContent.title || featuredContent.name}
-                  </h1>
-                  
-                  {/* Meta Bilgiler */}
-                  <div className="flex items-center space-x-6 mb-6 text-base animate-fade-in-left delay-300">
-                    <div className="flex items-center space-x-2 bg-black/40 backdrop-blur-md px-4 py-2.5 rounded-full border border-white/10 shadow-lg">
-                      <FaStar className="text-yellow-400 text-lg animate-pulse" />
-                      <span className="font-bold text-white">{formatRating(featuredContent.vote_average)}</span>
-                      <span className="text-gray-300 text-sm">/10</span>
-                    </div>
-                    
-                    <div className="flex items-center space-x-2 bg-black/40 backdrop-blur-md px-4 py-2.5 rounded-full border border-white/10 shadow-lg">
-                      <FaCalendar className="text-blue-400" />
-                      <span className="font-semibold text-white">{getYear(featuredContent.release_date || featuredContent.first_air_date)}</span>
-                    </div>
+          <div className="relative z-10">
+            <div className="container-custom py-20 md:py-28">
+              <div className="max-w-4xl space-y-8">
+                {mediaLabel && (
+                  <span className="inline-flex items-center text-xs uppercase tracking-[0.4em] text-white/60">
+                    {mediaLabel}
+                  </span>
+                )}
 
-                    <div className="hidden md:flex items-center space-x-2 bg-black/40 backdrop-blur-md px-4 py-2.5 rounded-full border border-white/10 shadow-lg">
-                      <div className="relative">
-                        <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse block"></span>
-                        <span className="absolute top-0 left-0 w-2 h-2 bg-green-400 rounded-full animate-ping"></span>
-                      </div>
-                      <span className="text-white font-medium">4K HDR</span>
-                    </div>
-                  </div>
+                <h1 className="text-4xl md:text-6xl font-black leading-tight tracking-tight">
+                  {featuredContent.title || featuredContent.name}
+                </h1>
 
-                  {/* Açıklama */}
-                  <p className="text-lg md:text-xl text-gray-200 mb-8 line-clamp-3 leading-relaxed font-light max-w-2xl animate-fade-in-up delay-400">
-                    {featuredContent.overview}
-                  </p>
+                <p className="text-base md:text-lg leading-relaxed text-white/80">
+                  {overviewText}
+                </p>
 
-                  {/* Action Buttons */}
-                  <div className="flex flex-col sm:flex-row space-y-3 sm:space-y-0 sm:space-x-4 animate-slide-in-right delay-500">
-                    <Link
-                      to={`/watch/${featuredContent.media_type || 'movie'}/${featuredContent.id}/${createSlug(featuredContent.title || featuredContent.name)}`}
-                      className="group relative overflow-hidden bg-gradient-to-r from-white to-gray-100 text-black px-8 py-4 rounded-xl font-bold text-lg transition-all duration-300 transform hover:scale-105 hover:shadow-2xl hover:shadow-white/25 flex items-center justify-center space-x-3 border border-white/20"
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-3 sm:gap-4">
+                  {metrics.map((metric) => (
+                    <div
+                      key={metric.label}
+                      className="rounded-2xl border bg-black/70 p-4 backdrop-blur-sm shadow-lg shadow-black/40"
+                      style={
+                        heroPalette
+                          ? {
+                              borderColor: heroPalette.border,
+                              boxShadow: accentShadowColor
+                                ? `0 25px 60px -35px ${accentShadowColor}`
+                                : undefined
+                            }
+                          : undefined
+                      }
                     >
-                      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent transform -skew-x-12 -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
-                      <FaPlay className="text-xl relative z-10 group-hover:scale-110 transition-transform" />
-                      <span className="relative z-10">Hemen İzle</span>
-                    </Link>
-                    
-                    <Link
-                      to={`/${featuredContent.media_type || 'movie'}/${featuredContent.id}/${createSlug(featuredContent.title || featuredContent.name)}`}
-                      className="group bg-black/40 backdrop-blur-md border-2 border-white/30 hover:border-white/60 text-white px-8 py-4 rounded-xl font-semibold text-lg transition-all duration-300 transform hover:scale-105 hover:bg-black/60 flex items-center justify-center space-x-3 shadow-lg"
-                    >
-                      <FaInfoCircle className="text-xl group-hover:rotate-12 transition-transform duration-300" />
-                      <span>Detaylar</span>
-                    </Link>
-                  </div>
+                      <span className="text-xs uppercase tracking-widest text-white/60">
+                        {metric.label}
+                      </span>
+                      <p className="mt-2 text-2xl font-semibold text-white">{metric.value}</p>
+                      <p className="mt-1 text-xs text-white/60">{metric.description}</p>
+                    </div>
+                  ))}
+                </div>
 
-                  {/* Additional Info */}
-                  <div className="mt-8 flex items-center space-x-6 text-sm text-gray-400 animate-fade-in-up delay-600">
-                    <div className="flex items-center space-x-2">
-                      <span className="w-1 h-1 bg-gray-400 rounded-full"></span>
-                      <span>Türkçe Dublaj</span>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <span className="w-1 h-1 bg-gray-400 rounded-full"></span>
-                      <span>Türkçe Altyazı</span>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <span className="w-1 h-1 bg-gray-400 rounded-full"></span>
-                      <span>Reklamsız</span>
-                    </div>
-                  </div>
+                <div className="flex flex-col gap-3 pt-2 sm:flex-row">
+                  <Link
+                    to={`/watch/${featuredContent.media_type || 'movie'}/${featuredContent.id}/${createSlug(
+                      featuredContent.title || featuredContent.name
+                    )}`}
+                    className="inline-flex items-center justify-center rounded-full border px-8 py-3 text-sm font-semibold uppercase tracking-[0.3em] transition-opacity hover:opacity-90"
+                    style={
+                      heroPalette
+                        ? {
+                            backgroundColor: heroPalette.cta,
+                            borderColor: heroPalette.border,
+                            color: '#fff',
+                            boxShadow: accentShadowColor
+                              ? `0 35px 70px -40px ${accentShadowColor}`
+                              : undefined
+                          }
+                        : undefined
+                    }
+                  >
+                    {primaryCta}
+                  </Link>
+
+                  <Link
+                    to={`/${featuredContent.media_type || 'movie'}/${featuredContent.id}/${createSlug(
+                      featuredContent.title || featuredContent.name
+                    )}`}
+                    className="inline-flex items-center justify-center rounded-full border px-8 py-3 text-sm font-semibold uppercase tracking-[0.3em] text-white/80 transition-colors hover:text-white hover:bg-black/80"
+                    style={
+                      heroPalette
+                        ? {
+                            borderColor: `${heroPalette.border}`,
+                            backgroundColor: 'rgba(17,17,17,0.7)',
+                            boxShadow: accentShadowColor
+                              ? `0 30px 70px -50px ${accentShadowColor}`
+                              : undefined
+                          }
+                        : undefined
+                    }
+                  >
+                    {secondaryCta}
+                  </Link>
                 </div>
               </div>
             </div>
