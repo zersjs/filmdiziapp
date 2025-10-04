@@ -31,6 +31,8 @@ const Home = () => {
   const { state, actions } = useApp();
   const { toast } = useToast();
   const [featuredContent, setFeaturedContent] = useState(null);
+  const [heroDetails, setHeroDetails] = useState(null);
+  const [heroDetailLoading, setHeroDetailLoading] = useState(false);
 
   // API hook'larını kullan
   const { data: trendingData, loading: trendingLoading, error: trendingError } = useApi(
@@ -153,6 +155,44 @@ const Home = () => {
     setFeaturedContent(selectFeaturedContent());
   }, [trendingData, popularMoviesData, topRatedData]);
 
+  useEffect(() => {
+    let isMounted = true;
+
+    const fetchHeroDetails = async () => {
+      if (!featuredContent) {
+        setHeroDetails(null);
+        return;
+      }
+
+      try {
+        setHeroDetailLoading(true);
+
+        const service =
+          featuredContent.media_type === 'tv' ? tvService.getDetail : movieService.getDetail;
+        const { data } = await service(featuredContent.id);
+
+        if (isMounted) {
+          setHeroDetails({ ...data, media_type: featuredContent.media_type });
+        }
+      } catch (error) {
+        if (isMounted) {
+          setHeroDetails(featuredContent);
+        }
+        toast.error('Hero içeriği yüklenirken bir sorun oluştu.');
+      } finally {
+        if (isMounted) {
+          setHeroDetailLoading(false);
+        }
+      }
+    };
+
+    fetchHeroDetails();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [featuredContent, toast]);
+
   const loading = trendingLoading || moviesLoading || seriesLoading || topRatedLoading || upcomingLoading;
 
   // Verileri hazırla
@@ -162,10 +202,12 @@ const Home = () => {
   const topRatedMovies = topRatedData?.results || [];
   const upcomingMovies = upcomingData?.results || [];
 
-  if (loading) return <HeroSkeleton />;
+  if (loading || heroDetailLoading) return <HeroSkeleton />;
 
-  const heroPalette = featuredContent
-    ? createAccentPalette(featuredContent.vote_average, featuredContent.popularity)
+  const heroData = heroDetails || featuredContent;
+
+  const heroPalette = heroData
+    ? createAccentPalette(heroData.vote_average, heroData.popularity)
     : null;
 
   const heroOverlayStyle = {
@@ -183,44 +225,32 @@ const Home = () => {
     ? heroPalette.accent.replace(', 1)', ', 0.35)')
     : undefined;
 
-  const mediaLabel = featuredContent
+  const mediaLabel = heroData
     ? [
-        featuredContent.media_type === 'movie' ? 'Film' : 'Dizi',
-        getYear(featuredContent.release_date || featuredContent.first_air_date),
-        featuredContent.original_language?.toUpperCase()
+        heroData.media_type === 'movie' ? 'Film' : 'Dizi',
+        getYear(heroData.release_date || heroData.first_air_date),
+        heroData.runtime
+          ? `${heroData.runtime} dk`
+          : heroData.episode_run_time?.length
+            ? `${heroData.episode_run_time[0]} dk`
+            : null,
+        heroData.number_of_seasons ? `${heroData.number_of_seasons} Sezon` : null,
+        heroData.original_language?.toUpperCase()
       ]
         .filter(Boolean)
         .join(' • ')
     : '';
 
-  const overviewText = featuredContent?.overview
-    ? truncateText(featuredContent.overview, 220)
-    : 'Bu içerik için detaylar henüz TMDB tarafından paylaşılmadı.';
+  const overviewText = heroData?.overview ? truncateText(heroData.overview, 260) : '';
 
-  const metrics = featuredContent
-    ? [
-        {
-          label: featuredContent.media_type === 'movie' ? 'Puan' : 'Bölüm Puanı',
-          value: formatRating(featuredContent.vote_average),
-          description: `${featuredContent.vote_count?.toLocaleString('tr-TR') || '0'} oy`
-        },
-        {
-          label: featuredContent.media_type === 'movie' ? 'Vizyon Yılı' : 'İlk Yayın',
-          value: getYear(featuredContent.release_date || featuredContent.first_air_date),
-          description: new Date(
-            featuredContent.release_date || featuredContent.first_air_date || Date.now()
-          ).toLocaleDateString('tr-TR', { dateStyle: 'long' })
-        },
-        {
-          label: 'Popülerlik',
-          value: Math.round(featuredContent.popularity || 0),
-          description: 'TMDB trend skoru'
-        }
-      ]
-    : [];
+  const genres = heroData?.genres?.map(genre => genre.name) || [];
 
-  const primaryCta = featuredContent?.media_type === 'tv' ? 'Diziyi İzle' : 'Filmi İzle';
-  const secondaryCta = featuredContent?.media_type === 'tv' ? 'Bölümlere Git' : 'Detayları Gör';
+  const ratingValue = heroData?.vote_average ? formatRating(heroData.vote_average) : null;
+  const voteCount = heroData?.vote_count ? heroData.vote_count.toLocaleString('tr-TR') : null;
+  const popularityValue = heroData?.popularity ? Math.round(heroData.popularity) : null;
+
+  const primaryCta = heroData?.media_type === 'tv' ? 'Diziyi İzle' : 'Filmi İzle';
+  const secondaryCta = heroData?.media_type === 'tv' ? 'Bölümlere Git' : 'Detayları Gör';
 
   return (
     <>
@@ -230,12 +260,12 @@ const Home = () => {
       </Helmet>
 
       {/* Hero Section */}
-      {featuredContent && (
+      {heroData && (
         <section className="relative min-h-[70vh] md:min-h-[80vh] overflow-hidden bg-black text-white">
           <div className="absolute inset-0 bg-black">
             <img
-              src={getImageUrl(featuredContent.backdrop_path, 'original')}
-              alt={featuredContent.title || featuredContent.name}
+              src={getImageUrl(heroData.backdrop_path || featuredContent?.backdrop_path, 'original')}
+              alt={heroData.title || heroData.name}
               className="h-full w-full object-cover opacity-60"
             />
             <div className="absolute inset-0 bg-gradient-to-br from-black via-black/90 to-black" />
@@ -247,88 +277,149 @@ const Home = () => {
 
           <div className="relative z-10">
             <div className="container-custom py-20 md:py-28">
-              <div className="max-w-4xl space-y-8">
-                {mediaLabel && (
-                  <span className="inline-flex items-center text-xs uppercase tracking-[0.4em] text-white/60">
-                    {mediaLabel}
-                  </span>
-                )}
+              <div className="grid gap-10 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center">
+                <div className="max-w-3xl space-y-6">
+                  {mediaLabel && (
+                    <span className="inline-flex items-center text-[0.65rem] uppercase tracking-[0.45em] text-white/50">
+                      {mediaLabel}
+                    </span>
+                  )}
 
-                <h1 className="text-4xl md:text-6xl font-black leading-tight tracking-tight">
-                  {featuredContent.title || featuredContent.name}
-                </h1>
+                  <div className="space-y-3">
+                    <h1 className="text-4xl md:text-6xl font-black leading-tight tracking-tight">
+                      {heroData.title || heroData.name}
+                    </h1>
+                    {heroData.tagline && (
+                      <p className="text-base md:text-lg italic text-white/60">
+                        “{heroData.tagline}”
+                      </p>
+                    )}
+                  </div>
 
-                <p className="text-base md:text-lg leading-relaxed text-white/80">
-                  {overviewText}
-                </p>
+                  {overviewText && (
+                    <p className="text-base md:text-lg leading-relaxed text-white/80">
+                      {overviewText}
+                    </p>
+                  )}
 
-                <div className="grid grid-cols-1 gap-3 sm:grid-cols-3 sm:gap-4">
-                  {metrics.map((metric) => (
-                    <div
-                      key={metric.label}
-                      className="rounded-2xl border bg-black/70 p-4 backdrop-blur-sm shadow-lg shadow-black/40"
+                  {genres.length > 0 && (
+                    <div className="flex flex-wrap gap-2 text-[0.65rem] uppercase tracking-[0.25em] text-white/50">
+                      {genres.map((genre) => (
+                        <span
+                          key={genre}
+                          className="rounded-full border border-white/10 bg-white/5 px-3 py-1"
+                        >
+                          {genre}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+
+                  <div className="flex flex-wrap gap-6 pt-2 text-sm text-white/70">
+                    {ratingValue && (
+                      <div>
+                        <span className="block text-xs uppercase tracking-[0.35em] text-white/40">
+                          TMDB Puanı
+                        </span>
+                        <span className="mt-1 block text-3xl font-semibold text-white">
+                          {ratingValue}
+                        </span>
+                      </div>
+                    )}
+                    {voteCount && (
+                      <div>
+                        <span className="block text-xs uppercase tracking-[0.35em] text-white/40">
+                          Oy Sayısı
+                        </span>
+                        <span className="mt-1 block text-2xl font-semibold text-white">
+                          {voteCount}
+                        </span>
+                      </div>
+                    )}
+                    {popularityValue && (
+                      <div>
+                        <span className="block text-xs uppercase tracking-[0.35em] text-white/40">
+                          Popülerlik
+                        </span>
+                        <span className="mt-1 block text-2xl font-semibold text-white">
+                          {popularityValue}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="flex flex-col gap-3 pt-4 sm:flex-row">
+                    <Link
+                      to={`/watch/${heroData.media_type || 'movie'}/${heroData.id}/${createSlug(
+                        heroData.title || heroData.name
+                      )}`}
+                      className="inline-flex items-center justify-center rounded-full border px-8 py-3 text-sm font-semibold uppercase tracking-[0.3em] transition-opacity hover:opacity-90"
                       style={
                         heroPalette
                           ? {
+                              backgroundColor: heroPalette.cta,
                               borderColor: heroPalette.border,
+                              color: '#fff',
                               boxShadow: accentShadowColor
-                                ? `0 25px 60px -35px ${accentShadowColor}`
+                                ? `0 35px 70px -40px ${accentShadowColor}`
                                 : undefined
                             }
                           : undefined
                       }
                     >
-                      <span className="text-xs uppercase tracking-widest text-white/60">
-                        {metric.label}
-                      </span>
-                      <p className="mt-2 text-2xl font-semibold text-white">{metric.value}</p>
-                      <p className="mt-1 text-xs text-white/60">{metric.description}</p>
+                      {primaryCta}
+                    </Link>
+
+                    <Link
+                      to={`/${heroData.media_type || 'movie'}/${heroData.id}/${createSlug(
+                        heroData.title || heroData.name
+                      )}`}
+                      className="inline-flex items-center justify-center rounded-full border px-8 py-3 text-sm font-semibold uppercase tracking-[0.3em] text-white/80 transition-colors hover:text-white hover:bg-black/80"
+                      style={
+                        heroPalette
+                          ? {
+                              borderColor: `${heroPalette.border}`,
+                              backgroundColor: 'rgba(17,17,17,0.7)',
+                              boxShadow: accentShadowColor
+                                ? `0 30px 70px -50px ${accentShadowColor}`
+                                : undefined
+                            }
+                          : undefined
+                      }
+                    >
+                      {secondaryCta}
+                    </Link>
+                  </div>
+                </div>
+
+                {heroData.poster_path && (
+                  <div className="hidden lg:block">
+                    <div
+                      className="relative w-60 overflow-hidden rounded-[2rem] border border-white/10 bg-black/80 shadow-[0_30px_80px_rgba(0,0,0,0.6)]"
+                      style={
+                        heroPalette
+                          ? {
+                              boxShadow: accentShadowColor
+                                ? `0 40px 100px -45px ${accentShadowColor}`
+                                : undefined
+                            }
+                          : undefined
+                      }
+                    >
+                      <img
+                        src={getImageUrl(heroData.poster_path, 'w500')}
+                        alt={`${heroData.title || heroData.name} poster`}
+                        className="h-full w-full object-cover"
+                      />
+                      {heroPalette && (
+                        <div
+                          className="absolute inset-0 bg-gradient-to-t from-black via-black/30 to-transparent"
+                          style={{ borderColor: heroPalette.border }}
+                        />
+                      )}
                     </div>
-                  ))}
-                </div>
-
-                <div className="flex flex-col gap-3 pt-2 sm:flex-row">
-                  <Link
-                    to={`/watch/${featuredContent.media_type || 'movie'}/${featuredContent.id}/${createSlug(
-                      featuredContent.title || featuredContent.name
-                    )}`}
-                    className="inline-flex items-center justify-center rounded-full border px-8 py-3 text-sm font-semibold uppercase tracking-[0.3em] transition-opacity hover:opacity-90"
-                    style={
-                      heroPalette
-                        ? {
-                            backgroundColor: heroPalette.cta,
-                            borderColor: heroPalette.border,
-                            color: '#fff',
-                            boxShadow: accentShadowColor
-                              ? `0 35px 70px -40px ${accentShadowColor}`
-                              : undefined
-                          }
-                        : undefined
-                    }
-                  >
-                    {primaryCta}
-                  </Link>
-
-                  <Link
-                    to={`/${featuredContent.media_type || 'movie'}/${featuredContent.id}/${createSlug(
-                      featuredContent.title || featuredContent.name
-                    )}`}
-                    className="inline-flex items-center justify-center rounded-full border px-8 py-3 text-sm font-semibold uppercase tracking-[0.3em] text-white/80 transition-colors hover:text-white hover:bg-black/80"
-                    style={
-                      heroPalette
-                        ? {
-                            borderColor: `${heroPalette.border}`,
-                            backgroundColor: 'rgba(17,17,17,0.7)',
-                            boxShadow: accentShadowColor
-                              ? `0 30px 70px -50px ${accentShadowColor}`
-                              : undefined
-                          }
-                        : undefined
-                    }
-                  >
-                    {secondaryCta}
-                  </Link>
-                </div>
+                  </div>
+                )}
               </div>
             </div>
           </div>
