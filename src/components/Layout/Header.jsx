@@ -99,6 +99,7 @@ const Header = () => {
           <button
             onClick={() => setIsSearchModalOpen(true)}
             className="hidden md:flex items-center space-x-2 px-4 py-2 bg-gray-900 border border-gray-800 rounded-full text-sm text-gray-400 hover:text-white hover:border-gray-600 transition-all duration-200 group"
+            aria-label="Arama yap"
           >
             <FaSearch className="group-hover:scale-110 transition-transform" />
             <span>Film, dizi ara...</span>

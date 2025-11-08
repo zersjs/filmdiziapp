@@ -21,7 +21,10 @@ const tmdbApi = axios.create({
 
 // Resim URL'leri için yardımcı fonksiyonlar
 export const getImageUrl = (path, size = 'original') => {
-  if (!path) return '/placeholder.jpg';
+  if (!path) {
+    // SVG placeholder as data URL
+    return 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNTAwIiBoZWlnaHQ9Ijc1MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iNTAwIiBoZWlnaHQ9Ijc1MCIgZmlsbD0iIzIxMjEyMSIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iMjQiIGZpbGw9IiM2NjY2NjYiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGR5PSIuM2VtIj5Hw7Zyc2VsIFlvazwvdGV4dD48L3N2Zz4=';
+  }
   return `${IMAGE_BASE_URL}/${size}${path}`;
 };
 

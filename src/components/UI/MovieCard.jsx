@@ -94,6 +94,7 @@ const MovieCard = ({ item, mediaType = 'movie' }) => {
                   isWatchLater ? 'bg-blue-500 text-white' : 'bg-black/60 hover:bg-black/80 text-white'
                 }`}
                 title={isWatchLater ? 'İzleme listesinden kaldır' : 'İzleme listesine ekle'}
+                aria-label={isWatchLater ? 'İzleme listesinden kaldır' : 'İzleme listesine ekle'}
               >
                 <FaClock className="text-xs" />
               </button>
@@ -107,6 +108,8 @@ const MovieCard = ({ item, mediaType = 'movie' }) => {
           className={`absolute top-2 right-2 w-8 h-8 rounded-full flex items-center justify-center transition-colors ${
             isFavorite ? 'bg-red-500' : 'bg-black/60 hover:bg-black/80'
           }`}
+          aria-label={isFavorite ? 'Favorilerden kaldır' : 'Favorilere ekle'}
+          title={isFavorite ? 'Favorilerden kaldır' : 'Favorilere ekle'}
         >
           <FaHeart className={`text-sm ${isFavorite ? 'text-white' : 'text-white/80'}`} />
         </button>

@@ -1,13 +1,14 @@
 import { renderHook, waitFor } from '@testing-library/react';
+import { describe, test, expect, beforeEach, vi } from 'vitest';
 import { useApi } from '../useApi';
 
 // Mock API function
-const mockApiSuccess = jest.fn(() => Promise.resolve({ data: { results: ['test'] } }));
-const mockApiError = jest.fn(() => Promise.reject(new Error('API Error')));
+const mockApiSuccess = vi.fn(() => Promise.resolve({ data: { results: ['test'] } }));
+const mockApiError = vi.fn(() => Promise.reject(new Error('API Error')));
 
 describe('useApi', () => {
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   test('should fetch data successfully', async () => {

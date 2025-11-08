@@ -3,6 +3,13 @@ import { createRoot } from 'react-dom/client';
 import App from './App';
 import './index.css';
 
+// Disable console logs in production
+if (import.meta.env.PROD) {
+  console.log = () => {};
+  console.warn = () => {};
+  console.info = () => {};
+}
+
 // Service Worker Registration
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
@@ -46,7 +53,7 @@ function showInstallPromotion() {
   if (!document.getElementById('install-button')) {
     const installButton = document.createElement('button');
     installButton.id = 'install-button';
-    installButton.innerHTML = '📱 Uygulamayı Yükle';
+    installButton.textContent = '📱 Uygulamayı Yükle';
     installButton.style.cssText = `
       position: fixed;
       bottom: 20px;
