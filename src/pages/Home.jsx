@@ -163,16 +163,6 @@ const Home = () => {
 
   if (loading) return <HeroSkeleton />;
 
-  const heroPalette = featuredContent
-    ? createAccentPalette(featuredContent.vote_average, featuredContent.popularity)
-    : null;
-
-  const heroOverlayStyle = heroPalette
-    ? {
-        background: `radial-gradient(circle at 18% 20%, ${heroPalette.primary} 0%, transparent 55%), radial-gradient(circle at 82% 25%, ${heroPalette.secondary} 0%, transparent 60%)`
-      }
-    : {};
-
   const mediaLabel = featuredContent
     ? [
         featuredContent.media_type === 'movie' ? 'Film' : 'Dizi',
@@ -226,10 +216,9 @@ const Home = () => {
             <img
               src={getImageUrl(featuredContent.backdrop_path, 'original')}
               alt={featuredContent.title || featuredContent.name}
-              className="h-full w-full object-cover"
+              className="h-full w-full object-cover opacity-40"
             />
-            <div className="absolute inset-0 bg-gradient-to-b from-black via-black/75 to-black/95" />
-            <div className="absolute inset-0 mix-blend-screen opacity-80" style={heroOverlayStyle} />
+            <div className="absolute inset-0 bg-gradient-to-b from-black via-black/90 to-black" />
           </div>
 
           <div className="relative z-10">

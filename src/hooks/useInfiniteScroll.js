@@ -54,7 +54,7 @@ export const useInfiniteScroll = (options = {}) => {
   };
 };
 
-// Scroll pozisyonu için hook
+// Scroll pozisyonu için hook (with throttle for performance)
 export const useScrollPosition = () => {
   const [scrollPosition, setScrollPosition] = useState({
     x: 0,
@@ -62,43 +62,64 @@ export const useScrollPosition = () => {
   });
 
   useEffect(() => {
+    let ticking = false;
+
     const updatePosition = () => {
       setScrollPosition({
         x: window.pageXOffset,
         y: window.pageYOffset
       });
+      ticking = false;
     };
 
-    window.addEventListener('scroll', updatePosition);
+    const handleScroll = () => {
+      if (!ticking) {
+        window.requestAnimationFrame(updatePosition);
+        ticking = true;
+      }
+    };
+
+    window.addEventListener('scroll', handleScroll, { passive: true });
     updatePosition();
 
-    return () => window.removeEventListener('scroll', updatePosition);
+    return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
   return scrollPosition;
 };
 
-// Sayfa sonuna gelme detection hook'u
+// Sayfa sonuna gelme detection hook'u (with throttle for performance)
 export const useScrollToBottom = (callback, threshold = 100) => {
   const [isNearBottom, setIsNearBottom] = useState(false);
 
   useEffect(() => {
-    const handleScroll = () => {
+    let ticking = false;
+
+    const checkScrollPosition = () => {
       const scrollTop = window.pageYOffset;
       const windowHeight = window.innerHeight;
       const documentHeight = document.documentElement.scrollHeight;
-      
+
       const distanceFromBottom = documentHeight - (scrollTop + windowHeight);
       const nearBottom = distanceFromBottom <= threshold;
-      
+
       setIsNearBottom(nearBottom);
-      
+
       if (nearBottom && callback) {
         callback();
       }
+
+      ticking = false;
     };
 
-    window.addEventListener('scroll', handleScroll);
+    const handleScroll = () => {
+      if (!ticking) {
+        window.requestAnimationFrame(checkScrollPosition);
+        ticking = true;
+      }
+    };
+
+    window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
   }, [callback, threshold]);
 
