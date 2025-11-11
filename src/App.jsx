@@ -20,7 +20,10 @@ import Contact from './pages/Contact';
 import PrivacyPolicy from './pages/PrivacyPolicy';
 import Terms from './pages/Terms';
 import FAQ from './pages/FAQ';
+import Trending from './pages/Trending';
 import Login from './components/Auth/Login';
+import Register from './components/Auth/Register';
+import ForgotPassword from './components/Auth/ForgotPassword';
 import SEORouter from './components/SEORouter';
 
 // ScrollToTop component to reset scroll position on page navigation
@@ -58,7 +61,10 @@ function App() {
                   <Route path="/genre/:type/:id" element={<Genre />} />
                   <Route path="/favorites" element={<Favorites />} />
                   <Route path="/watch-later" element={<WatchLater />} />
+                  <Route path="/trending" element={<Trending />} />
                   <Route path="/login" element={<Login />} />
+                  <Route path="/register" element={<Register />} />
+                  <Route path="/forgot-password" element={<ForgotPassword />} />
                   <Route path="/iletisim" element={<Contact />} />
                   <Route path="/gizlilik-politikasi" element={<PrivacyPolicy />} />
                   <Route path="/kullanim-kosullari" element={<Terms />} />

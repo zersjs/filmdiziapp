@@ -8,10 +8,11 @@ import { useApp } from '../../contexts';
 import { useToast } from './Toast';
 import 'react-lazy-load-image-component/src/effects/blur.css';
 
-const MovieCard = ({ item, mediaType = 'movie' }) => {
+const MovieCard = ({ item, mediaType = 'movie', showRank = false, rank = 0 }) => {
   const { actions } = useApp();
   const { toast } = useToast();
   const [imageError, setImageError] = useState(false);
+  const [isHovered, setIsHovered] = useState(false);
 
   const isFavorite = actions.isFavorite(item.id, mediaType);
   const isWatchLater = actions.isWatchLater(item.id, mediaType);
@@ -47,8 +48,20 @@ const MovieCard = ({ item, mediaType = 'movie' }) => {
   const posterUrl = item.poster_path ? getImageUrl(item.poster_path, 'w342') : null;
 
   return (
-    <Link to={detailPath} className="group block transition-transform duration-300 hover:scale-105">
+    <Link
+      to={detailPath}
+      className="group block transition-transform duration-300 hover:scale-105"
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+    >
       <div className="relative aspect-[2/3] overflow-hidden rounded-lg bg-gray-900 shadow-lg">
+        {/* Rank Badge - Top 10 */}
+        {showRank && rank <= 10 && (
+          <div className="absolute top-0 left-0 z-20 bg-gradient-to-r from-yellow-500 to-orange-500 text-white font-black text-2xl px-4 py-2 rounded-br-lg shadow-2xl">
+            #{rank}
+          </div>
+        )}
+
         {/* Poster */}
         {posterUrl && !imageError ? (
           <LazyLoadImage
