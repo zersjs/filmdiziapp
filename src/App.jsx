@@ -24,6 +24,11 @@ import Trending from './pages/Trending';
 import Login from './components/Auth/Login';
 import Register from './components/Auth/Register';
 import ForgotPassword from './components/Auth/ForgotPassword';
+import Profile from './pages/Profile';
+import Settings from './pages/Settings';
+import NotFound from './pages/NotFound';
+import VerifyEmail from './pages/VerifyEmail';
+import ResetPassword from './pages/ResetPassword';
 import SEORouter from './components/SEORouter';
 
 // ScrollToTop component to reset scroll position on page navigation
@@ -65,10 +70,15 @@ function App() {
                   <Route path="/login" element={<Login />} />
                   <Route path="/register" element={<Register />} />
                   <Route path="/forgot-password" element={<ForgotPassword />} />
+                  <Route path="/verify-email/:token" element={<VerifyEmail />} />
+                  <Route path="/reset-password/:token" element={<ResetPassword />} />
+                  <Route path="/profile" element={<Profile />} />
+                  <Route path="/settings" element={<Settings />} />
                   <Route path="/iletisim" element={<Contact />} />
                   <Route path="/gizlilik-politikasi" element={<PrivacyPolicy />} />
                   <Route path="/kullanim-kosullari" element={<Terms />} />
                   <Route path="/sss" element={<FAQ />} />
+                  <Route path="*" element={<NotFound />} />
                 </Routes>
               </Layout>
             </Router>
