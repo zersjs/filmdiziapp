@@ -1,7 +1,17 @@
 import React from 'react';
 import { createRoot } from 'react-dom/client';
+import { Toaster } from 'react-hot-toast';
 import App from './App';
 import './index.css';
+import './i18n/config';
+import useThemeStore from './stores/themeStore';
+import useAuthStore from './stores/authStore';
+
+// Initialize theme
+useThemeStore.getState().initTheme();
+
+// Load user on app start
+useAuthStore.getState().loadUser();
 
 // Disable console logs in production
 if (import.meta.env.PROD) {
@@ -135,5 +145,29 @@ const root = createRoot(container);
 root.render(
   <React.StrictMode>
     <App />
+    <Toaster
+      position="top-right"
+      toastOptions={{
+        duration: 3000,
+        style: {
+          background: '#1f2937',
+          color: '#fff',
+          borderRadius: '12px',
+          padding: '16px',
+        },
+        success: {
+          iconTheme: {
+            primary: '#10b981',
+            secondary: '#fff',
+          },
+        },
+        error: {
+          iconTheme: {
+            primary: '#ef4444',
+            secondary: '#fff',
+          },
+        },
+      }}
+    />
   </React.StrictMode>
 );

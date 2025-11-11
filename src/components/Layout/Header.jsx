@@ -1,22 +1,35 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { FaSearch, FaBars, FaTimes, FaHeart, FaFilm, FaTv, FaHome, FaClock } from 'react-icons/fa';
+import { FaSearch, FaBars, FaTimes, FaHeart, FaFilm, FaTv, FaHome, FaClock, FaSun, FaMoon, FaGlobe, FaUser, FaSignInAlt } from 'react-icons/fa';
+import { useTranslation } from 'react-i18next';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useApp } from '../../contexts';
 import { useSearchDebounce, useScrollPosition } from '../../hooks';
+import useAuthStore from '../../stores/authStore';
+import useThemeStore from '../../stores/themeStore';
 import SearchModal from '../UI/SearchModal';
 
 const Header = () => {
+  const { t, i18n } = useTranslation();
   const { state } = useApp();
+  const { isAuthenticated, user } = useAuthStore();
+  const { theme, toggleTheme } = useThemeStore();
   const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearchModalOpen, setIsSearchModalOpen] = useState(false);
+  const [showLangMenu, setShowLangMenu] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
   const scrollPosition = useScrollPosition();
-  
+
   const isScrolled = scrollPosition.y > 10;
   const favoritesCount = state.favorites.length;
   const watchLaterCount = state.watchLater.length;
+
+  const toggleLanguage = () => {
+    const newLang = i18n.language === 'tr' ? 'en' : 'tr';
+    i18n.changeLanguage(newLang);
+  };
 
   // Ctrl+K shortcut for search
   useEffect(() => {
@@ -42,18 +55,18 @@ const Header = () => {
   };
 
   const navLinks = [
-    { path: '/', label: 'Ana Sayfa', icon: <FaHome /> },
-    { path: '/movies', label: 'Filmler', icon: <FaFilm /> },
-    { path: '/series', label: 'Diziler', icon: <FaTv /> },
-    { 
-      path: '/favorites', 
-      label: 'Favorilerim', 
+    { path: '/', label: t('nav.home'), icon: <FaHome /> },
+    { path: '/movies', label: t('nav.movies'), icon: <FaFilm /> },
+    { path: '/series', label: t('nav.series'), icon: <FaTv /> },
+    {
+      path: '/favorites',
+      label: t('nav.favorites'),
       icon: <FaHeart />,
       badge: favoritesCount > 0 ? favoritesCount : null
     },
-    { 
-      path: '/watch-later', 
-      label: 'İzleme Listem', 
+    {
+      path: '/watch-later',
+      label: t('nav.watchLater'),
       icon: <FaClock />,
       badge: watchLaterCount > 0 ? watchLaterCount : null
     },
@@ -95,16 +108,85 @@ const Header = () => {
             ))}
           </div>
 
-          {/* Search Button - Opens Modal */}
-          <button
-            onClick={() => setIsSearchModalOpen(true)}
-            className="hidden md:flex items-center space-x-2 px-4 py-2 bg-gray-900 border border-gray-800 rounded-full text-sm text-gray-400 hover:text-white hover:border-gray-600 transition-all duration-200 group"
-            aria-label="Arama yap"
-          >
-            <FaSearch className="group-hover:scale-110 transition-transform" />
-            <span>Film, dizi ara...</span>
-            <kbd className="px-2 py-1 bg-gray-800 rounded text-xs">Ctrl K</kbd>
-          </button>
+          {/* Right Side Actions */}
+          <div className="hidden md:flex items-center space-x-3">
+            {/* Search Button */}
+            <button
+              onClick={() => setIsSearchModalOpen(true)}
+              className="flex items-center space-x-2 px-4 py-2 bg-gray-900 border border-gray-800 rounded-full text-sm text-gray-400 hover:text-white hover:border-gray-600 transition-all duration-200 group"
+              aria-label="Arama yap"
+            >
+              <FaSearch className="group-hover:scale-110 transition-transform" />
+              <span className="hidden lg:inline">Film, dizi ara...</span>
+              <kbd className="hidden lg:inline px-2 py-1 bg-gray-800 rounded text-xs">Ctrl K</kbd>
+            </button>
+
+            {/* Theme Toggle */}
+            <motion.button
+              whileTap={{ scale: 0.95 }}
+              onClick={toggleTheme}
+              className="p-3 rounded-full bg-gray-900 border border-gray-800 text-gray-400 hover:text-yellow-400 hover:border-gray-600 transition-all duration-200"
+              aria-label="Toggle theme"
+              title={theme === 'dark' ? 'Light Mode' : 'Dark Mode'}
+            >
+              <AnimatePresence mode="wait">
+                {theme === 'dark' ? (
+                  <motion.div
+                    key="moon"
+                    initial={{ rotate: -90, opacity: 0 }}
+                    animate={{ rotate: 0, opacity: 1 }}
+                    exit={{ rotate: 90, opacity: 0 }}
+                    transition={{ duration: 0.2 }}
+                  >
+                    <FaMoon size={16} />
+                  </motion.div>
+                ) : (
+                  <motion.div
+                    key="sun"
+                    initial={{ rotate: 90, opacity: 0 }}
+                    animate={{ rotate: 0, opacity: 1 }}
+                    exit={{ rotate: -90, opacity: 0 }}
+                    transition={{ duration: 0.2 }}
+                  >
+                    <FaSun size={16} />
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </motion.button>
+
+            {/* Language Toggle */}
+            <motion.button
+              whileTap={{ scale: 0.95 }}
+              onClick={toggleLanguage}
+              className="p-3 rounded-full bg-gray-900 border border-gray-800 text-gray-400 hover:text-blue-400 hover:border-gray-600 transition-all duration-200 relative group"
+              aria-label="Change language"
+              title={i18n.language === 'tr' ? 'Switch to English' : 'Türkçe\'ye Geç'}
+            >
+              <FaGlobe size={16} />
+              <span className="absolute -bottom-1 -right-1 text-[10px] font-bold bg-blue-500 text-white px-1 rounded">
+                {i18n.language.toUpperCase()}
+              </span>
+            </motion.button>
+
+            {/* Auth Buttons */}
+            {isAuthenticated ? (
+              <Link
+                to="/profile"
+                className="flex items-center space-x-2 px-4 py-2 rounded-full bg-gradient-to-r from-purple-600 to-blue-600 text-white hover:from-purple-700 hover:to-blue-700 transition-all duration-200"
+              >
+                <FaUser size={14} />
+                <span className="hidden lg:inline">{user?.username || 'Profile'}</span>
+              </Link>
+            ) : (
+              <Link
+                to="/login"
+                className="flex items-center space-x-2 px-4 py-2 rounded-full bg-gradient-to-r from-purple-600 to-blue-600 text-white hover:from-purple-700 hover:to-blue-700 transition-all duration-200"
+              >
+                <FaSignInAlt size={14} />
+                <span>{t('nav.login')}</span>
+              </Link>
+            )}
+          </div>
 
           {/* Mobile Menu Button - Animated Hamburger */}
           <button

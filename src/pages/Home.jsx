@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { Link } from 'react-router-dom';
-import { FaFilm, FaTv, FaTimes } from 'react-icons/fa';
+import { FaFilm, FaTv, FaTimes, FaPlay, FaInfoCircle } from 'react-icons/fa';
+import { motion } from 'framer-motion';
+import { useTranslation } from 'react-i18next';
 import { movieService, tvService, trendingService, getImageUrl } from '../services/tmdb';
 import { formatRating, getYear, truncateText, createSlug } from '../utils/helpers';
 import { useApi } from '../hooks';
@@ -27,6 +29,7 @@ const createAccentPalette = (voteAverage = 0, popularity = 0) => {
 };
 
 const Home = () => {
+  const { t } = useTranslation();
   const { state, actions } = useApp();
   const { toast } = useToast();
   const [featuredContent, setFeaturedContent] = useState(null);
@@ -209,73 +212,126 @@ const Home = () => {
         <meta name="description" content="Binlerce film ve diziyi ücretsiz izleyin. En yeni içerikler, en kaliteli izleme deneyimi." />
       </Helmet>
 
-      {/* Hero Section */}
+      {/* Hero Section - Enhanced with better visibility */}
       {featuredContent && (
-        <section className="relative min-h-[70vh] md:min-h-[80vh] overflow-hidden text-white">
+        <motion.section
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.8 }}
+          className="relative min-h-[75vh] md:min-h-[85vh] lg:min-h-[90vh] overflow-hidden text-white"
+        >
+          {/* Background Image with improved visibility */}
           <div className="absolute inset-0">
-            <img
+            <motion.img
+              initial={{ scale: 1.1 }}
+              animate={{ scale: 1 }}
+              transition={{ duration: 1.5 }}
               src={getImageUrl(featuredContent.backdrop_path, 'original')}
               alt={featuredContent.title || featuredContent.name}
-              className="h-full w-full object-cover opacity-40"
+              className="h-full w-full object-cover opacity-70"
             />
-            <div className="absolute inset-0 bg-gradient-to-b from-black via-black/90 to-black" />
+            {/* Enhanced gradient overlay for better readability */}
+            <div className="absolute inset-0 bg-gradient-to-t from-black via-black/70 to-black/40" />
+            <div className="absolute inset-0 bg-gradient-to-r from-black/80 via-transparent to-transparent" />
           </div>
 
+          {/* Content */}
           <div className="relative z-10">
-            <div className="container-custom py-20 md:py-28">
-              <div className="max-w-4xl space-y-8">
+            <div className="container-custom py-24 md:py-32 lg:py-40">
+              <motion.div
+                initial={{ opacity: 0, y: 30 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.8, delay: 0.2 }}
+                className="max-w-4xl space-y-6 md:space-y-8"
+              >
+                {/* Media Label */}
                 {mediaLabel && (
-                  <span className="inline-flex items-center text-xs uppercase tracking-[0.4em] text-white/60">
+                  <motion.span
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ delay: 0.3 }}
+                    className="inline-flex items-center text-xs md:text-sm uppercase tracking-[0.4em] text-white/80 font-semibold"
+                  >
                     {mediaLabel}
-                  </span>
+                  </motion.span>
                 )}
 
-                <h1 className="text-4xl md:text-6xl font-black leading-tight tracking-tight">
+                {/* Title */}
+                <motion.h1
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.4 }}
+                  className="text-4xl md:text-6xl lg:text-7xl xl:text-8xl font-black leading-tight tracking-tight drop-shadow-2xl"
+                >
                   {featuredContent.title || featuredContent.name}
-                </h1>
+                </motion.h1>
 
-                <p className="text-base md:text-lg leading-relaxed text-white/80">
+                {/* Description */}
+                <motion.p
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: 0.5 }}
+                  className="text-base md:text-lg lg:text-xl leading-relaxed text-white/90 max-w-3xl drop-shadow-lg"
+                >
                   {overviewText}
-                </p>
+                </motion.p>
 
-                <div className="grid grid-cols-1 gap-3 sm:grid-cols-3 sm:gap-4">
-                  {metrics.map((metric) => (
-                    <div
+                {/* Metrics */}
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.6 }}
+                  className="grid grid-cols-1 gap-3 sm:grid-cols-3 sm:gap-4 max-w-2xl"
+                >
+                  {metrics.map((metric, index) => (
+                    <motion.div
                       key={metric.label}
-                      className="rounded-2xl border border-white/10 bg-white/5 p-4 backdrop-blur-sm"
+                      initial={{ opacity: 0, scale: 0.9 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      transition={{ delay: 0.7 + index * 0.1 }}
+                      whileHover={{ scale: 1.05 }}
+                      className="rounded-2xl border border-white/20 bg-white/10 backdrop-blur-md p-5 hover:bg-white/15 transition-all duration-300"
                     >
-                      <span className="text-xs uppercase tracking-widest text-white/50">
+                      <span className="text-xs uppercase tracking-widest text-white/70 font-medium">
                         {metric.label}
                       </span>
-                      <p className="mt-2 text-2xl font-semibold text-white">{metric.value}</p>
-                      <p className="mt-1 text-xs text-white/60">{metric.description}</p>
-                    </div>
+                      <p className="mt-2 text-3xl font-bold text-white drop-shadow-md">{metric.value}</p>
+                      <p className="mt-1 text-xs text-white/70">{metric.description}</p>
+                    </motion.div>
                   ))}
-                </div>
+                </motion.div>
 
-                <div className="flex flex-col gap-3 pt-2 sm:flex-row">
+                {/* Action Buttons */}
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.9 }}
+                  className="flex flex-col gap-4 pt-4 sm:flex-row"
+                >
                   <Link
                     to={`/watch/${featuredContent.media_type || 'movie'}/${featuredContent.id}/${createSlug(
                       featuredContent.title || featuredContent.name
                     )}`}
-                    className="inline-flex items-center justify-center rounded-full border border-white/30 bg-white/10 px-8 py-3 text-sm font-semibold uppercase tracking-[0.3em] transition-colors hover:bg-white hover:text-black"
+                    className="group inline-flex items-center justify-center gap-3 rounded-full bg-gradient-to-r from-red-600 to-orange-600 px-10 py-4 text-base font-bold uppercase tracking-wide text-white shadow-2xl transition-all duration-300 hover:from-red-700 hover:to-orange-700 hover:scale-105 hover:shadow-red-500/50"
                   >
-                    {primaryCta}
+                    <FaPlay className="text-sm group-hover:scale-110 transition-transform" />
+                    <span>{primaryCta}</span>
                   </Link>
 
                   <Link
                     to={`/${featuredContent.media_type || 'movie'}/${featuredContent.id}/${createSlug(
                       featuredContent.title || featuredContent.name
                     )}`}
-                    className="inline-flex items-center justify-center rounded-full border border-white/20 px-8 py-3 text-sm font-semibold uppercase tracking-[0.3em] text-white/80 transition-colors hover:border-white/60 hover:text-white"
+                    className="group inline-flex items-center justify-center gap-3 rounded-full border-2 border-white/40 bg-white/10 backdrop-blur-md px-10 py-4 text-base font-bold uppercase tracking-wide text-white transition-all duration-300 hover:border-white hover:bg-white/20 hover:scale-105"
                   >
-                    {secondaryCta}
+                    <FaInfoCircle className="text-sm group-hover:scale-110 transition-transform" />
+                    <span>{secondaryCta}</span>
                   </Link>
-                </div>
-              </div>
+                </motion.div>
+              </motion.div>
             </div>
           </div>
-        </section>
+        </motion.section>
       )}
 
       {/* İçerik Bölümleri */}
