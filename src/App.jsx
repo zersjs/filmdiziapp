@@ -20,6 +20,11 @@ import Contact from './pages/Contact';
 import PrivacyPolicy from './pages/PrivacyPolicy';
 import Terms from './pages/Terms';
 import FAQ from './pages/FAQ';
+import Subscription from './pages/Subscription';
+import Profile from './pages/Profile';
+import Leaderboard from './pages/Leaderboard';
+import Quizzes from './pages/Quizzes';
+import Polls from './pages/Polls';
 import SEORouter from './components/SEORouter';
 
 // ScrollToTop component to reset scroll position on page navigation
@@ -61,6 +66,11 @@ function App() {
                   <Route path="/gizlilik-politikasi" element={<PrivacyPolicy />} />
                   <Route path="/kullanim-kosullari" element={<Terms />} />
                   <Route path="/sss" element={<FAQ />} />
+                  <Route path="/subscription" element={<Subscription />} />
+                  <Route path="/profile/:userId" element={<Profile />} />
+                  <Route path="/leaderboard" element={<Leaderboard />} />
+                  <Route path="/quizzes" element={<Quizzes />} />
+                  <Route path="/polls" element={<Polls />} />
                 </Routes>
               </Layout>
             </Router>

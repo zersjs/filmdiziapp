@@ -23,6 +23,15 @@ import { generalLimiter } from './middleware/rateLimiter.js';
 
 // Import routes
 import authRoutes from './routes/authRoutes.js';
+import subscriptionRoutes from './routes/subscriptionRoutes.js';
+import ratingRoutes from './routes/ratingRoutes.js';
+import pollRoutes from './routes/pollRoutes.js';
+import socialRoutes from './routes/socialRoutes.js';
+import gamificationRoutes from './routes/gamificationRoutes.js';
+import communityRoutes from './routes/communityRoutes.js';
+import liveStreamRoutes from './routes/liveStreamRoutes.js';
+import quizRoutes from './routes/quizRoutes.js';
+import playlistRoutes from './routes/playlistRoutes.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -98,6 +107,15 @@ app.get('/health', (req, res) => {
 
 // API routes
 app.use('/api/auth', authRoutes);
+app.use('/api/subscriptions', subscriptionRoutes);
+app.use('/api/ratings', ratingRoutes);
+app.use('/api/polls', pollRoutes);
+app.use('/api/social', socialRoutes);
+app.use('/api/gamification', gamificationRoutes);
+app.use('/api/community', communityRoutes);
+app.use('/api/streams', liveStreamRoutes);
+app.use('/api/quizzes', quizRoutes);
+app.use('/api/playlists', playlistRoutes);
 
 // Welcome route
 app.get('/', (req, res) => {
