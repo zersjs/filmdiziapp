@@ -1,4 +1,4 @@
-// Tarih formatlama
+
 export const formatDate = (dateString) => {
   if (!dateString) return 'Tarih bilinmiyor';
   
@@ -7,13 +7,11 @@ export const formatDate = (dateString) => {
   return date.toLocaleDateString('tr-TR', options);
 };
 
-// Yıl çıkarma
 export const getYear = (dateString) => {
   if (!dateString) return '';
   return new Date(dateString).getFullYear();
 };
 
-// Süre formatlama (dakika -> saat dakika)
 export const formatRuntime = (minutes) => {
   if (!minutes) return 'Süre bilinmiyor';
   
@@ -24,13 +22,11 @@ export const formatRuntime = (minutes) => {
   return `${hours}sa ${mins}dk`;
 };
 
-// Puan formatlama
 export const formatRating = (rating) => {
   if (!rating) return '0.0';
   return rating.toFixed(1);
 };
 
-// Para formatlama
 export const formatCurrency = (amount) => {
   if (!amount) return 'Bilinmiyor';
   
@@ -41,20 +37,17 @@ export const formatCurrency = (amount) => {
   }).format(amount);
 };
 
-// Sayı formatlama (binlik ayırıcı)
 export const formatNumber = (number) => {
   if (!number) return '0';
   return new Intl.NumberFormat('tr-TR').format(number);
 };
 
-// Metin kısaltma
 export const truncateText = (text, maxLength = 150) => {
   if (!text) return '';
   if (text.length <= maxLength) return text;
   return text.substring(0, maxLength) + '...';
 };
 
-// Dil kodu -> Dil adı
 export const getLanguageName = (languageCode) => {
   const languages = {
     'en': 'İngilizce',
@@ -75,11 +68,9 @@ export const getLanguageName = (languageCode) => {
   return languages[languageCode] || languageCode.toUpperCase();
 };
 
-// Sertifikasyon/Yaş sınırı
 export const getCertification = (releaseDates) => {
   if (!releaseDates || !releaseDates.results) return null;
   
-  // Önce TR, sonra US sertifikasyonu ara
   const trRelease = releaseDates.results.find(r => r.iso_3166_1 === 'TR');
   const usRelease = releaseDates.results.find(r => r.iso_3166_1 === 'US');
   
@@ -94,7 +85,6 @@ export const getCertification = (releaseDates) => {
   return null;
 };
 
-// Cinsiyet
 export const getGenderText = (gender) => {
   switch (gender) {
     case 1: return 'Kadın';
@@ -103,7 +93,6 @@ export const getGenderText = (gender) => {
   }
 };
 
-// Department çevirisi
 export const getDepartmentText = (department) => {
   const departments = {
     'Acting': 'Oyunculuk',
@@ -122,7 +111,6 @@ export const getDepartmentText = (department) => {
   return departments[department] || department;
 };
 
-// Local Storage yardımcıları
 export const storage = {
   get: (key) => {
     try {
@@ -151,7 +139,6 @@ export const storage = {
   }
 };
 
-// Favori işlemleri
 export const favorites = {
   getAll: () => storage.get('favorites') || [],
   
@@ -175,7 +162,6 @@ export const favorites = {
   }
 };
 
-// İzleme geçmişi
 export const watchHistory = {
   getAll: () => storage.get('watchHistory') || [],
   
@@ -189,7 +175,6 @@ export const watchHistory = {
     
     history.unshift({ ...item, watchedAt: new Date().toISOString() });
     
-    // Son 50 öğeyi tut
     if (history.length > 50) {
       history.splice(50);
     }
@@ -198,7 +183,6 @@ export const watchHistory = {
   }
 };
 
-// URL slug oluşturma (SEO friendly)
 export const createSlug = (text) => {
   if (!text) return '';
   
@@ -212,5 +196,5 @@ export const createSlug = (text) => {
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '')
-    + '-izle'; // SEO için "izle" eki ekliyoruz
+    + '-izle'; 
 };

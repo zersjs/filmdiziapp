@@ -1,6 +1,5 @@
 import React from 'react';
 
-// Base skeleton component
 const Skeleton = ({ className = '', variant = 'rectangular', animation = 'pulse' }) => {
   const baseClasses = 'bg-gray-800 rounded';
   const variantClasses = {
@@ -27,7 +26,6 @@ const Skeleton = ({ className = '', variant = 'rectangular', animation = 'pulse'
   );
 };
 
-// Movie Card Skeleton
 export const MovieCardSkeleton = () => (
   <div className="space-y-3">
     <Skeleton className="aspect-[2/3] w-full" variant="rectangular" />
@@ -36,38 +34,53 @@ export const MovieCardSkeleton = () => (
   </div>
 );
 
-// Hero Section Skeleton
 export const HeroSkeleton = () => (
-  <div className="relative h-[85vh] min-h-[700px] bg-gray-900 overflow-hidden">
-    <div className="absolute inset-0">
-      <Skeleton className="w-full h-full" animation="shimmer" />
-    </div>
+  <div className="relative min-h-[70vh] md:min-h-[80vh] bg-gradient-to-b from-gray-900 via-gray-900 to-black overflow-hidden">
+    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-gray-800/20 to-transparent animate-shimmer" 
+         style={{ backgroundSize: '200% 100%', animation: 'shimmer 2s infinite linear' }} />
+    
     <div className="relative h-full flex items-center">
-      <div className="container-custom">
-        <div className="max-w-3xl space-y-6">
-          <div className="flex items-center space-x-3">
-            <Skeleton className="w-20 h-8 rounded-full" />
-            <Skeleton className="w-32 h-8 rounded-full" />
+      <div className="container-custom py-20 md:py-28">
+        <div className="max-w-4xl space-y-8">
+          <Skeleton className="h-4 w-32" />
+          
+          <div className="space-y-3">
+            <Skeleton className="h-12 md:h-16 w-full max-w-xl" />
+            <Skeleton className="h-12 md:h-16 w-3/4 max-w-md" />
           </div>
-          <Skeleton className="h-16 w-full max-w-2xl" />
-          <div className="flex items-center space-x-4">
-            <Skeleton className="w-24 h-10 rounded-full" />
-            <Skeleton className="w-20 h-10 rounded-full" />
-            <Skeleton className="w-28 h-10 rounded-full" />
+          
+          <div className="space-y-2">
+            <Skeleton className="h-5 w-full max-w-lg" />
+            <Skeleton className="h-5 w-5/6 max-w-md" />
           </div>
-          <Skeleton className="h-6 w-full max-w-xl" />
-          <Skeleton className="h-6 w-4/5 max-w-xl" />
-          <div className="flex space-x-4 pt-4">
-            <Skeleton className="w-40 h-14 rounded-xl" />
-            <Skeleton className="w-32 h-14 rounded-xl" />
+          
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3 sm:gap-4 max-w-xl">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                <Skeleton className="h-3 w-16 mb-3" />
+                <Skeleton className="h-7 w-12 mb-2" />
+                <Skeleton className="h-3 w-20" />
+              </div>
+            ))}
+          </div>
+          
+          <div className="flex flex-col gap-3 pt-2 sm:flex-row">
+            <Skeleton className="h-12 w-36 rounded-full" />
+            <Skeleton className="h-12 w-32 rounded-full" />
           </div>
         </div>
       </div>
     </div>
+    
+    <style>{`
+      @keyframes shimmer {
+        0% { background-position: -200% 0; }
+        100% { background-position: 200% 0; }
+      }
+    `}</style>
   </div>
 );
 
-// Content Section Skeleton
 export const ContentSectionSkeleton = ({ title = "Loading...", itemCount = 12 }) => (
   <section className="space-y-6">
     <div className="flex items-center justify-between">
@@ -82,7 +95,6 @@ export const ContentSectionSkeleton = ({ title = "Loading...", itemCount = 12 })
   </section>
 );
 
-// Continue Watching Skeleton
 export const ContinueWatchingSkeleton = () => (
   <section className="space-y-6">
     <div className="flex items-center space-x-3">
@@ -112,7 +124,6 @@ export const ContinueWatchingSkeleton = () => (
   </section>
 );
 
-// Search Results Skeleton
 export const SearchResultsSkeleton = () => (
   <div className="space-y-6">
     <div className="flex items-center justify-between">
@@ -127,10 +138,8 @@ export const SearchResultsSkeleton = () => (
   </div>
 );
 
-// Detail Page Skeleton
 export const DetailPageSkeleton = () => (
   <div className="space-y-8">
-    {/* Hero Section */}
     <div className="relative h-[70vh] bg-gray-900">
       <Skeleton className="absolute inset-0" animation="shimmer" />
       <div className="relative h-full flex items-end">
@@ -157,7 +166,6 @@ export const DetailPageSkeleton = () => (
       </div>
     </div>
     
-    {/* Content Sections */}
     <div className="container-custom space-y-12">
       <ContentSectionSkeleton title="Cast" itemCount={8} />
       <ContentSectionSkeleton title="Similar" itemCount={8} />
@@ -165,7 +173,6 @@ export const DetailPageSkeleton = () => (
   </div>
 );
 
-// List Page Skeleton
 export const ListPageSkeleton = () => (
   <div className="container-custom py-8 space-y-8">
     <div className="flex items-center justify-between">
@@ -179,7 +186,6 @@ export const ListPageSkeleton = () => (
       <Skeleton className="w-32 h-10 rounded-lg" />
     </div>
     
-    {/* Stats */}
     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
       {Array.from({ length: 3 }).map((_, index) => (
         <div key={index} className="bg-gray-900 rounded-lg p-4 space-y-2">

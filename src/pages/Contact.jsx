@@ -21,7 +21,6 @@ const Contact = () => {
     e.preventDefault();
     setIsSubmitting(true);
     
-    // Simulated form submission
     setTimeout(() => {
       setIsSubmitting(false);
       setSubmitResult({

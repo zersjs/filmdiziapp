@@ -25,22 +25,18 @@ const SEORouter = ({ type = 'detail' }) => {
       setLoading(true);
       setError(null);
 
-      // Slug'dan -izle kısmını çıkar
       const cleanSlug = slug.replace('-izle', '');
       
-      // Önce popüler filmlerden ara
       const [moviesRes, tvRes] = await Promise.all([
         movieService.getPopular(),
         tvService.getPopular()
       ]);
 
-      // Tüm içerikleri birleştir
       const allContent = [
         ...moviesRes.data.results.map(item => ({ ...item, media_type: 'movie' })),
         ...tvRes.data.results.map(item => ({ ...item, media_type: 'tv' }))
       ];
 
-      // Slug ile eşleşen içeriği bul
       const foundContent = allContent.find(item => {
         const itemSlug = createSlug(item.title || item.name);
         return itemSlug === cleanSlug;
@@ -49,7 +45,7 @@ const SEORouter = ({ type = 'detail' }) => {
       if (foundContent) {
         setContent(foundContent);
       } else {
-        // Bulunamazsa arama yap
+        
         const searchRes = await searchService.multi(cleanSlug.replace(/-/g, ' '));
         const searchResults = searchRes.data.results.filter(
           item => item.media_type === 'movie' || item.media_type === 'tv'
@@ -95,7 +91,6 @@ const SEORouter = ({ type = 'detail' }) => {
     );
   }
 
-  // URL'yi doğru formata yönlendir
   const correctSlug = createSlug(content.title || content.name);
   const currentPath = window.location.pathname;
   

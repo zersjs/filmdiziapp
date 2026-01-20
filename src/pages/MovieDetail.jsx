@@ -47,7 +47,6 @@ const MovieDetail = () => {
       setMovie(response.data);
       setIsFavorite(favorites.isFavorite(response.data.id, 'movie'));
       
-      // İzleme geçmişine ekle
       watchHistory.add({
         id: response.data.id,
         title: response.data.title,
@@ -90,7 +89,7 @@ const MovieDetail = () => {
   };
 
   const loadMediaContent = async () => {
-    if (mediaContent) return; // Zaten yüklendiyse tekrar yükleme
+    if (mediaContent) return; 
     
     try {
       setMediaLoading(true);
@@ -134,34 +133,29 @@ const MovieDetail = () => {
         <meta name="description" content={movie.overview} />
       </Helmet>
 
-      {/* Hero Section */}
-      <section className="relative min-h-[70vh] flex items-end">
-        {/* Backdrop */}
+      <section className="relative min-h-[60vh] md:min-h-[70vh] flex items-end">
         <div className="absolute inset-0">
           <img
             src={getImageUrl(movie.backdrop_path, 'original')}
             alt={movie.title}
-            className="w-full h-full object-cover"
+            className="w-full h-full object-cover opacity-30 md:opacity-40"
           />
-          <div className="absolute inset-0 bg-gradient-to-t from-black via-black/70 to-black/40" />
+          <div className="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-transparent" />
         </div>
 
-        {/* Content */}
-        <div className="relative z-10 w-full pb-8 pt-32">
+        <div className="relative z-10 w-full pb-8 pt-20 md:pt-32">
           <div className="container-custom">
-            <div className="flex flex-col md:flex-row gap-8">
-              {/* Poster */}
-              <div className="flex-shrink-0">
+            <div className="flex flex-col md:flex-row gap-6 md:gap-8 items-center md:items-start text-center md:text-left">
+              <div className="flex-shrink-0 w-40 md:w-64">
                 <img
                   src={getImageUrl(movie.poster_path, 'w342')}
                   alt={movie.title}
-                  className="w-48 md:w-64 rounded-lg shadow-2xl"
+                  className="w-full rounded-xl shadow-2xl border border-white/5"
                 />
               </div>
 
-              {/* Info */}
               <div className="flex-grow">
-                <h1 className="text-4xl md:text-5xl font-bold mb-4">
+                <h1 className="text-3xl md:text-5xl font-bold mb-3">
                   {movie.title}
                 </h1>
 
@@ -169,7 +163,7 @@ const MovieDetail = () => {
                   <p className="text-xl text-gray-300 italic mb-4">"{movie.tagline}"</p>
                 )}
 
-                <div className="flex flex-wrap items-center gap-4 mb-6 text-sm">
+                <div className="flex flex-wrap items-center justify-center md:justify-start gap-4 mb-6 text-xs md:text-sm">
                   <span className="flex items-center">
                     <FaStar className="text-yellow-500 mr-1" />
                     <strong>{formatRating(movie.vote_average)}</strong>
@@ -187,53 +181,39 @@ const MovieDetail = () => {
                   </span>
                   
                   {certification && (
-                    <span className="px-2 py-1 border border-gray-600 rounded">
+                    <span className="px-2 py-0.5 border border-gray-700 rounded text-[10px]">
                       {certification}
                     </span>
                   )}
                 </div>
 
-                {/* Genres */}
-                <div className="flex flex-wrap gap-2 mb-6">
+                <div className="flex flex-wrap justify-center md:justify-start gap-2 mb-8">
                   {movie.genres?.map(genre => (
                     <Link
                       key={genre.id}
                       to={`/genre/movie/${genre.id}`}
-                      className="px-3 py-1 bg-gray-800 rounded-full text-sm hover:bg-gray-700 transition-colors"
+                      className="px-3 py-1 bg-white/5 border border-white/5 rounded-full text-xs hover:bg-white/10 transition-colors"
                     >
                       {genre.name}
                     </Link>
                   ))}
                 </div>
 
-                {/* Actions */}
-                <div className="flex flex-wrap gap-4">
+                <div className="flex flex-wrap items-center justify-center md:justify-start gap-3">
                   <Link
                     to={`/watch/movie/${movie.id}`}
-                    className="btn-primary flex items-center space-x-2"
+                    className="btn-primary flex items-center space-x-2 px-8"
                   >
-                    <FaPlay />
-                    <span>Hemen İzle</span>
+                    <FaPlay className="text-xs" />
+                    <span className="text-sm font-bold tracking-widest">HEMEN İZLE</span>
                   </Link>
-                  
-                  {trailer && (
-                    <a
-                      href={`https://www.youtube.com/watch?v=${trailer.key}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="btn-secondary flex items-center space-x-2"
-                    >
-                      <FaYoutube />
-                      <span>Fragman</span>
-                    </a>
-                  )}
                   
                   <button
                     onClick={toggleFavorite}
-                    className={`p-3 rounded-lg transition-colors ${
+                    className={`p-3 rounded-xl transition-colors ${
                       isFavorite 
-                        ? 'bg-red-600 hover:bg-red-700' 
-                        : 'bg-gray-800 hover:bg-gray-700'
+                        ? 'bg-white text-black' 
+                        : 'bg-white/5 border border-white/5 text-white hover:bg-white/10'
                     }`}
                   >
                     <FaHeart />
@@ -241,7 +221,7 @@ const MovieDetail = () => {
                   
                   <button
                     onClick={handleShare}
-                    className="p-3 bg-gray-800 rounded-lg hover:bg-gray-700 transition-colors"
+                    className="p-3 bg-white/5 border border-white/5 rounded-xl hover:bg-white/10 transition-colors"
                   >
                     <FaShare />
                   </button>
@@ -252,25 +232,24 @@ const MovieDetail = () => {
         </div>
       </section>
 
-      {/* Tabs */}
-      <section className="border-b border-gray-800 sticky top-16 bg-black z-20">
+      <section className="border-b border-white/5 sticky top-16 bg-black/80 backdrop-blur-md z-20">
         <div className="container-custom">
           <div className="flex overflow-x-auto scrollbar-hide">
             {[
-              { id: 'overview', label: 'Genel Bakış' },
-              { id: 'cast', label: 'Oyuncular' },
-              { id: 'media', label: 'Medya' },
-              { id: 'details', label: 'Detaylar' },
-              { id: 'reviews', label: 'Yorumlar' },
-              { id: 'similar', label: 'Benzer Filmler' }
+              { id: 'overview', label: 'GENEL BAKIŞ' },
+              { id: 'cast', label: 'OYUNCULAR' },
+              { id: 'media', label: 'MEDYA' },
+              { id: 'details', label: 'DETAYLAR' },
+              { id: 'reviews', label: 'YORUMLAR' },
+              { id: 'similar', label: 'BENZERLER' }
             ].map(tab => (
               <button
                 key={tab.id}
                 onClick={() => handleTabChange(tab.id)}
-                className={`px-6 py-4 whitespace-nowrap transition-colors ${
+                className={`px-6 py-4 whitespace-nowrap transition-all text-[10px] font-bold tracking-[0.2em] ${
                   activeTab === tab.id
                     ? 'text-white border-b-2 border-white'
-                    : 'text-gray-400 hover:text-white'
+                    : 'text-gray-500 hover:text-white'
                 }`}
               >
                 {tab.label}
@@ -280,7 +259,6 @@ const MovieDetail = () => {
         </div>
       </section>
 
-      {/* Tab Content */}
       <section className="container-custom py-8">
         {activeTab === 'overview' && (
           <div className="max-w-4xl">
@@ -306,7 +284,6 @@ const MovieDetail = () => {
               </div>
             )}
 
-            {/* Keywords */}
             {movie.keywords?.keywords?.length > 0 && (
               <div>
                 <h3 className="text-lg font-semibold mb-3">Anahtar Kelimeler</h3>
@@ -423,7 +400,6 @@ const MovieDetail = () => {
                 </div>
               )}
 
-              {/* External Links */}
               <div className="flex items-center space-x-4 pt-4">
                 {movie.imdb_id && (
                   <a

@@ -3,7 +3,7 @@ import { useParams, Link, useNavigate } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import { 
   FaPlay, FaStar, FaHeart, FaShare, FaCalendar, FaTv, 
-  FaUsers, FaTags, FaClock, FaGlobe, FaNetworkWired, FaImdb 
+  FaUsers, FaTags, FaClock, FaGlobe, FaNetworkWired, FaImdb, FaChevronDown 
 } from 'react-icons/fa';
 import { tvService, mediaService, getImageUrl } from '../services/tmdb';
 import { 
@@ -100,36 +100,33 @@ const SeriesDetail = () => {
         <meta name="description" content={series.overview} />
       </Helmet>
 
-      {/* Hero Section */}
-      <section className="relative min-h-[70vh] flex items-end">
+      <section className="relative min-h-[60vh] md:min-h-[70vh] flex items-end">
         <div className="absolute inset-0">
           <img
             src={getImageUrl(series.backdrop_path, 'original')}
             alt={series.name}
-            className="w-full h-full object-cover"
+            className="w-full h-full object-cover opacity-30 md:opacity-40"
           />
-          <div className="absolute inset-0 bg-gradient-to-t from-black via-black/70 to-black/40" />
+          <div className="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-transparent" />
         </div>
 
-        <div className="relative z-10 w-full pb-8 pt-32">
+        <div className="relative z-10 w-full pb-8 pt-20 md:pt-32">
           <div className="container-custom">
-            <div className="flex flex-col md:flex-row gap-8">
-              {/* Poster */}
-              <div className="flex-shrink-0">
+            <div className="flex flex-col md:flex-row gap-6 md:gap-8 items-center md:items-start text-center md:text-left">
+              <div className="flex-shrink-0 w-40 md:w-64">
                 <img
                   src={getImageUrl(series.poster_path, 'w342')}
                   alt={series.name}
-                  className="w-48 md:w-64 rounded-lg shadow-2xl"
+                  className="w-full rounded-xl shadow-2xl border border-white/5"
                 />
               </div>
 
-              {/* Info */}
               <div className="flex-grow">
-                <h1 className="text-4xl md:text-5xl font-bold mb-4">
+                <h1 className="text-3xl md:text-5xl font-bold mb-3">
                   {series.name}
                 </h1>
 
-                <div className="flex flex-wrap items-center gap-4 mb-6 text-sm">
+                <div className="flex flex-wrap items-center justify-center md:justify-start gap-4 mb-6 text-xs md:text-sm">
                   <span className="flex items-center">
                     <FaStar className="text-yellow-500 mr-1" />
                     <strong>{formatRating(series.vote_average)}</strong>
@@ -145,30 +142,32 @@ const SeriesDetail = () => {
                   </span>
                 </div>
 
-                <div className="flex flex-wrap gap-2 mb-6">
+                <div className="flex flex-wrap justify-center md:justify-start gap-2 mb-8">
                   {series.genres?.map(genre => (
                     <Link
                       key={genre.id}
                       to={`/genre/tv/${genre.id}`}
-                      className="px-3 py-1 bg-gray-800 rounded-full text-sm hover:bg-gray-700 transition-colors"
+                      className="px-3 py-1 bg-white/5 border border-white/5 rounded-full text-xs hover:bg-white/10 transition-colors"
                     >
                       {genre.name}
                     </Link>
                   ))}
                 </div>
 
-                <div className="flex flex-wrap gap-4">
+                <div className="flex flex-wrap items-center justify-center md:justify-start gap-3">
                   <Link
                     to={`/watch/tv/${series.id}`}
-                    className="btn-primary flex items-center space-x-2"
+                    className="btn-primary flex items-center space-x-2 px-8"
                   >
-                    <FaPlay />
-                    <span>Sezon 1 İzle</span>
+                    <FaPlay className="text-xs" />
+                    <span className="text-sm font-bold tracking-widest uppercase">İlk Bölümü İzle</span>
                   </Link>
                   <button
                     onClick={toggleFavorite}
-                    className={`p-3 rounded-lg transition-colors ${
-                      isFavorite ? 'bg-red-600 hover:bg-red-700' : 'bg-gray-800 hover:bg-gray-700'
+                    className={`p-3 rounded-xl transition-colors ${
+                      isFavorite 
+                        ? 'bg-white text-black' 
+                        : 'bg-white/5 border border-white/5 text-white hover:bg-white/10'
                     }`}
                   >
                     <FaHeart />
@@ -180,26 +179,25 @@ const SeriesDetail = () => {
         </div>
       </section>
       
-      {/* Tabs */}
-      <section className="border-b border-gray-800 sticky top-16 bg-black z-20">
+      <section className="border-b border-white/5 sticky top-16 bg-black/80 backdrop-blur-md z-20">
         <div className="container-custom">
           <div className="flex overflow-x-auto scrollbar-hide">
             {[
-              { id: 'overview', label: 'Genel Bakış' },
-              { id: 'seasons', label: 'Sezonlar' },
-              { id: 'cast', label: 'Oyuncular' },
-              { id: 'media', label: 'Medya' },
-              { id: 'details', label: 'Detaylar' },
-              { id: 'reviews', label: 'Yorumlar' },
-              { id: 'similar', label: 'Benzer Diziler' }
+              { id: 'overview', label: 'GENEL BAKIŞ' },
+              { id: 'seasons', label: 'SEZONLAR' },
+              { id: 'cast', label: 'OYUNCULAR' },
+              { id: 'media', label: 'MEDYA' },
+              { id: 'details', label: 'DETAYLAR' },
+              { id: 'reviews', label: 'YORUMLAR' },
+              { id: 'similar', label: 'BENZERLER' }
             ].map(tab => (
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`px-6 py-4 whitespace-nowrap transition-colors ${
+                className={`px-6 py-4 whitespace-nowrap transition-all text-[10px] font-bold tracking-[0.2em] ${
                   activeTab === tab.id
                     ? 'text-white border-b-2 border-white'
-                    : 'text-gray-400 hover:text-white'
+                    : 'text-gray-500 hover:text-white'
                 }`}
               >
                 {tab.label}
@@ -209,7 +207,6 @@ const SeriesDetail = () => {
         </div>
       </section>
       
-      {/* Tab Content */}
       <section className="container-custom py-8">
     {activeTab === 'overview' && (
       <div className="max-w-4xl">
@@ -321,26 +318,38 @@ const SeasonsList = ({ seasons, seriesId }) => {
   return (
     <div className="space-y-4 max-w-4xl">
       {seasons.map(season => (
-        <div key={season.id} className="bg-gray-900 rounded-lg overflow-hidden">
+        <div key={season.id} className="bg-white/5 border border-white/5 rounded-2xl overflow-hidden transition-all duration-300">
           <div 
-            className="flex items-start p-4 cursor-pointer hover:bg-gray-800 transition-colors" 
+            className="flex items-center p-4 cursor-pointer hover:bg-white/10 transition-colors gap-5" 
             onClick={() => toggleSeason(season.season_number)}
           >
-            <img src={getImageUrl(season.poster_path, 'w185')} alt={season.name} className="w-24 rounded" />
-            <div className="ml-4 flex-grow">
-              <h3 className="text-xl font-bold">{season.name}</h3>
-              <div className="flex items-center space-x-4 text-sm text-gray-400 mt-1">
-                <span>{getYear(season.air_date)}</span>
-                <span>{season.episode_count} Bölüm</span>
+            <div className="flex-shrink-0 w-20 sm:w-24 aspect-[2/3] rounded-xl overflow-hidden shadow-xl">
+              <img src={getImageUrl(season.poster_path, 'w185')} alt={season.name} className="w-full h-full object-cover" />
+            </div>
+            <div className="flex-grow min-w-0">
+              <h3 className="text-lg sm:text-xl font-bold uppercase tracking-tight italic">{season.name}</h3>
+              <div className="flex items-center space-x-4 text-[10px] font-bold uppercase tracking-widest text-gray-500 mt-2">
+                <span>{getYear(season.air_date) || 'YAKINDA'}</span>
+                <span>{season.episode_count} BÖLÜM</span>
               </div>
-              <p className="text-sm mt-2 line-clamp-2">{season.overview}</p>
+              <p className="text-xs text-gray-400 mt-2 line-clamp-2 hidden sm:block italic font-light">{season.overview || 'Bu sezon için henüz bir özet girilmemiş.'}</p>
+            </div>
+            <div className={`transition-transform duration-300 ${expandedSeason === season.season_number ? 'rotate-180' : ''}`}>
+              <FaChevronDown className="text-gray-600" />
             </div>
           </div>
 
           {expandedSeason === season.season_number && (
-            <div className="p-4 border-t border-gray-800">
-              <Link to={`/watch/tv/${seriesId}?season=${season.season_number}`} className="btn-secondary">
-                Sezonu İzle
+            <div className="px-6 py-6 border-t border-white/5 bg-black/40 animate-fade-in">
+              <p className="text-sm text-gray-400 mb-6 font-light leading-relaxed block sm:hidden italic">
+                {season.overview || 'Bu sezon için henüz bir özet girilmemiş.'}
+              </p>
+              <Link 
+                to={`/watch/tv/${seriesId}?season=${season.season_number}`} 
+                className="btn-primary inline-flex items-center space-x-3 px-8"
+              >
+                <FaPlay className="text-[10px]" />
+                <span className="text-xs font-black tracking-[0.2em] uppercase">SEZONU İZLE</span>
               </Link>
             </div>
           )}

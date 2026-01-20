@@ -19,7 +19,7 @@ const Footer = () => {
     {
       title: 'Türler',
       links: [
-        // Günlük olarak rastgele değişecek türler için seed olarak günün tarihini kullanıyoruz
+        
         { label: 'Macera', path: '/genre/movie/12' },
         { label: 'Animasyon', path: '/genre/movie/16' }, 
         { label: 'Suç', path: '/genre/movie/80' },
@@ -29,11 +29,11 @@ const Footer = () => {
         { label: 'Korku', path: '/genre/movie/27' },
         { label: 'Müzikal', path: '/genre/movie/10402' }
       ].sort(() => {
-        // Günlük değişim için tarih bazlı seed
+        
         const today = new Date();
         const seed = today.getFullYear() * 10000 + (today.getMonth() + 1) * 100 + today.getDate();
         return (Math.sin(seed) * 10000) % 2 - 1;
-      }).slice(0, 4) // İlk 4'ü al
+      }).slice(0, 4) 
     },
     {
       title: 'Hakkımızda',
@@ -61,7 +61,6 @@ const Footer = () => {
     <footer className="bg-gray-950 border-t border-gray-900 mt-20">
       <div className="container-custom py-12">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
-          {/* Logo ve Açıklama */}
           <div className="col-span-1">
             <Link to="/" className="inline-block mb-4">
               <h2 className="text-2xl font-bold">SINE<span className="text-gray-500">FIX</span></h2>
@@ -85,7 +84,6 @@ const Footer = () => {
             </div>
           </div>
 
-          {/* Footer Linkleri */}
           {footerLinks.map((section, index) => (
             <div key={index} className="col-span-1">
               <h3 className="text-white font-semibold mb-4">{section.title}</h3>
@@ -105,7 +103,6 @@ const Footer = () => {
           ))}
         </div>
 
-        {/* İzleme Hakkında Bilgilendirme */}
         <div className="border-t border-gray-900 mt-8 pt-8">
           <div className="bg-gray-900 rounded-lg p-6">
             <h3 className="text-lg font-medium text-white mb-4 text-center">İzleme Hakkında Bilgilendirme</h3>
@@ -146,7 +143,6 @@ const Footer = () => {
           </div>
         </div>
 
-        {/* Film ve Dizi İzleme Hakkında Açılır Kapanır Bölüm */}
         <div className="mt-8 border-t border-gray-900 pt-6">
           <button 
             onClick={toggleCollapse}
@@ -202,7 +198,6 @@ const Footer = () => {
           </div>
         </div>
 
-        {/* Alt Bilgi */}
         <div className="border-t border-gray-900 pt-6 text-center mt-6">
           <p className="text-gray-500 text-sm">
             © {currentYear} SINEFIX. Tüm hakları saklıdır.

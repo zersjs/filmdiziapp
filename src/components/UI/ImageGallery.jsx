@@ -42,7 +42,6 @@ const ImageGallery = ({ images, title }) => {
     <div>
       <h2 className="text-2xl font-bold mb-4">Görseller</h2>
       
-      {/* Tabs */}
       <div className="flex space-x-6 mb-6 border-b border-gray-800">
         {tabs.map(tab => (
           <button
@@ -60,7 +59,6 @@ const ImageGallery = ({ images, title }) => {
         ))}
       </div>
 
-      {/* Image Grid */}
       <div className={`grid gap-4 ${
         activeTab === 'posters' 
           ? 'grid-cols-3 sm:grid-cols-4 md:grid-cols-6' 
@@ -86,7 +84,6 @@ const ImageGallery = ({ images, title }) => {
         ))}
       </div>
 
-      {/* Lightbox Modal */}
       {selectedImage !== null && (
         <div 
           className="fixed inset-0 bg-black/95 z-[10000] flex items-center justify-center p-4"

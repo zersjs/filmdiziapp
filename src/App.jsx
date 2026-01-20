@@ -2,6 +2,7 @@ import React from 'react';
 import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
 import { HelmetProvider } from 'react-helmet-async';
 import { AppProvider } from './contexts';
+import { AuthProvider } from './contexts/AuthContext';
 import { ToastProvider } from './components/UI/Toast';
 import ErrorBoundary from './components/ErrorBoundary';
 import Layout from './components/Layout/Layout';
@@ -25,9 +26,11 @@ import Profile from './pages/Profile';
 import Leaderboard from './pages/Leaderboard';
 import Quizzes from './pages/Quizzes';
 import Polls from './pages/Polls';
+import Shorts from './pages/Shorts';
+import Login from './pages/Login';
+import Register from './pages/Register';
 import SEORouter from './components/SEORouter';
 
-// ScrollToTop component to reset scroll position on page navigation
 const ScrollToTop = () => {
   const { pathname } = useLocation();
   
@@ -42,9 +45,10 @@ function App() {
   return (
     <ErrorBoundary>
       <HelmetProvider>
-        <AppProvider>
-          <ToastProvider>
-            <Router>
+        <AuthProvider>
+          <AppProvider>
+            <ToastProvider>
+              <Router>
               <ScrollToTop />
               <Layout>
                 <Routes>
@@ -71,11 +75,16 @@ function App() {
                   <Route path="/leaderboard" element={<Leaderboard />} />
                   <Route path="/quizzes" element={<Quizzes />} />
                   <Route path="/polls" element={<Polls />} />
+                  <Route path="/sahneler" element={<Shorts />} />
+                  <Route path="/sahneler/:slug" element={<Shorts />} />
+                  <Route path="/login" element={<Login />} />
+                  <Route path="/register" element={<Register />} />
                 </Routes>
               </Layout>
             </Router>
           </ToastProvider>
         </AppProvider>
+      </AuthProvider>
       </HelmetProvider>
     </ErrorBoundary>
   );

@@ -2,7 +2,6 @@ import { renderHook, waitFor } from '@testing-library/react';
 import { describe, test, expect, beforeEach, vi } from 'vitest';
 import { useApi } from '../useApi';
 
-// Mock API function
 const mockApiSuccess = vi.fn(() => Promise.resolve({ data: { results: ['test'] } }));
 const mockApiError = vi.fn(() => Promise.reject(new Error('API Error')));
 

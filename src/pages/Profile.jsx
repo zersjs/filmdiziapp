@@ -1,32 +1,57 @@
 import React, { useState, useEffect } from 'react';
-import { useParams } from 'react-router-dom';
-import { motion } from 'framer-motion';
+import { useParams, useNavigate, Link } from 'react-router-dom';
+import { Helmet } from 'react-helmet-async';
 import {
-  FaUser, FaEnvelope, FaCalendar, FaMapMarkerAlt, FaLink,
-  FaTwitter, FaInstagram, FaFacebook, FaCog, FaTrophy,
-  FaStar, FaFilm, FaTv, FaHeart, FaUsers
+  FaUser, FaEnvelope, FaCalendar, FaHeart, FaBookmark, FaHistory,
+  FaCog, FaSignOutAlt, FaFilm, FaTv, FaEdit
 } from 'react-icons/fa';
-import axios from 'axios';
+import { useAuth } from '../contexts/AuthContext';
+import { bookmarksService, watchHistoryService, likesService, supabase } from '../services/supabase';
+import { getImageUrl } from '../services/tmdb';
 
 const Profile = () => {
   const { userId } = useParams();
-  const [user, setUser] = useState(null);
-  const [stats, setStats] = useState(null);
-  const [activeTab, setActiveTab] = useState('overview');
+  const navigate = useNavigate();
+  const { user: currentUser, signOut } = useAuth();
+  const [activeTab, setActiveTab] = useState('bookmarks');
   const [loading, setLoading] = useState(true);
+  const [bookmarks, setBookmarks] = useState([]);
+  const [history, setHistory] = useState([]);
+  const [likesCount, setLikesCount] = useState(0);
+  const [profileData, setProfileData] = useState(null);
+
+  const isOwnProfile = currentUser?.id === userId;
 
   useEffect(() => {
-    fetchUserProfile();
+    fetchProfileData();
   }, [userId]);
 
-  const fetchUserProfile = async () => {
+  const fetchProfileData = async () => {
+    setLoading(true);
     try {
-      const [userRes, statsRes] = await Promise.all([
-        axios.get(`${import.meta.env.VITE_API_URL}/users/${userId}`),
-        axios.get(`${import.meta.env.VITE_API_URL}/gamification/leaderboard/${userId}`)
-      ]);
-      setUser(userRes.data.data);
-      setStats(statsRes.data.data);
+      if (supabase) {
+        const { data: userData } = await supabase.auth.getUser();
+        if (userData?.user && userData.user.id === userId) {
+          setProfileData(userData.user);
+        }
+      }
+
+      if (isOwnProfile && currentUser?.id) {
+        const [bookmarksRes, historyRes] = await Promise.all([
+          bookmarksService.getBookmarks(currentUser.id),
+          watchHistoryService.getHistory(currentUser.id, 10)
+        ]);
+        setBookmarks(bookmarksRes.data || []);
+        setHistory(historyRes.data || []);
+        
+        if (supabase) {
+          const { count } = await supabase
+            .from('likes')
+            .select('*', { count: 'exact', head: true })
+            .eq('user_id', currentUser.id);
+          setLikesCount(count || 0);
+        }
+      }
     } catch (error) {
       console.error('Error fetching profile:', error);
     } finally {
@@ -34,197 +59,163 @@ const Profile = () => {
     }
   };
 
+  const handleSignOut = async () => {
+    await signOut();
+    navigate('/');
+  };
+
+  const tabs = [
+    { id: 'bookmarks', label: 'Kaydedilenler', icon: FaBookmark, count: bookmarks.length },
+    { id: 'history', label: 'İzleme Geçmişi', icon: FaHistory, count: history.length },
+    { id: 'likes', label: 'Beğeniler', icon: FaHeart, count: likesCount },
+  ];
+
+  const userInfo = profileData || currentUser;
+  const username = userInfo?.user_metadata?.username || userInfo?.email?.split('@')[0] || 'Kullanıcı';
+  const email = userInfo?.email || '';
+  const joinDate = userInfo?.created_at ? new Date(userInfo.created_at).toLocaleDateString('tr-TR', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric'
+  }) : '';
+
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-purple-500"></div>
+      <div className="profile-page">
+        <div className="profile-loading">
+          <div className="profile-loading-spinner" />
+        </div>
       </div>
     );
   }
 
-  const tabs = [
-    { id: 'overview', label: 'Overview', icon: FaUser },
-    { id: 'activity', label: 'Activity', icon: FaStar },
-    { id: 'watchlist', label: 'Watchlist', icon: FaFilm },
-    { id: 'favorites', label: 'Favorites', icon: FaHeart },
-    { id: 'followers', label: 'Followers', icon: FaUsers },
-  ];
+  if (!currentUser && !profileData) {
+    return (
+      <div className="profile-page">
+        <div className="profile-empty">
+          <FaUser className="profile-empty-icon" />
+          <h2>Profil Bulunamadı</h2>
+          <p>Bu profili görüntülemek için giriş yapmanız gerekiyor.</p>
+          <Link to="/login" className="profile-login-btn">Giriş Yap</Link>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-purple-900/20 to-gray-900 py-20 px-4">
-      <div className="max-w-7xl mx-auto">
-        {/* Profile Header */}
-        <motion.div
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="bg-gray-800/50 backdrop-blur-lg rounded-2xl p-8 mb-8"
-        >
-          <div className="flex flex-col md:flex-row items-center gap-8">
-            <div className="relative">
-              <img
-                src={user?.avatar || '/default-avatar.png'}
-                alt={user?.username}
-                className="w-32 h-32 rounded-full border-4 border-purple-500 object-cover"
-              />
-              <div className="absolute -bottom-2 -right-2 bg-purple-600 rounded-full p-2">
-                <FaTrophy className="text-yellow-400 text-xl" />
+    <>
+      <Helmet>
+        <title>{username} | SineFix Profil</title>
+      </Helmet>
+
+      <div className="min-h-screen pt-24 pb-12 overflow-x-hidden">
+        <div className="container-custom">
+          <div className="bg-[#0a0a0a] border border-[#1a1a1a] rounded-lg p-8 mb-8">
+            <div className="flex flex-col md:flex-row items-center gap-8">
+              <div className="w-24 h-24 bg-white text-black flex items-center justify-center text-3xl font-bold rounded-full">
+                {username.charAt(0).toUpperCase()}
               </div>
+
+              <div className="flex-grow text-center md:text-left">
+                <h1 className="text-3xl font-bold mb-1">{username}</h1>
+                <p className="text-gray-400 mb-4">{email}</p>
+                <div className="flex items-center justify-center md:justify-start gap-6 text-sm text-gray-500">
+                  <span className="flex items-center gap-2">
+                    <FaCalendar /> {joinDate}
+                  </span>
+                </div>
+              </div>
+
+              {isOwnProfile && (
+                <div className="flex gap-3">
+                  <button className="btn-secondary text-xs">
+                    <FaEdit className="mr-2" /> Düzenle
+                  </button>
+                  <button className="btn-secondary text-xs border-red-900/30 text-red-500 hover:bg-red-950/20" onClick={handleSignOut}>
+                    <FaSignOutAlt className="mr-2" /> Çıkış
+                  </button>
+                </div>
+              )}
             </div>
 
-            <div className="flex-1 text-center md:text-left">
-              <h1 className="text-4xl font-bold text-white mb-2">{user?.username}</h1>
-              <p className="text-gray-400 mb-4">{user?.bio || 'No bio yet'}</p>
-
-              <div className="flex flex-wrap gap-4 text-gray-300 mb-4">
-                <div className="flex items-center gap-2">
-                  <FaCalendar className="text-purple-500" />
-                  <span>Joined {new Date(user?.createdAt).toLocaleDateString()}</span>
-                </div>
-                {user?.location && (
-                  <div className="flex items-center gap-2">
-                    <FaMapMarkerAlt className="text-purple-500" />
-                    <span>{user.location.city}, {user.location.country}</span>
-                  </div>
-                )}
+            <div className="flex gap-12 mt-12 pt-8 border-t border-[#1a1a1a] justify-center md:justify-start">
+               <div className="text-center md:text-left">
+                <div className="text-2xl font-bold">{bookmarks.length}</div>
+                <div className="text-xs uppercase tracking-widest text-gray-500 mt-1">Kaydedilen</div>
               </div>
-
-              <div className="flex flex-wrap gap-4 mb-4">
-                {user?.socialLinks?.twitter && (
-                  <a href={user.socialLinks.twitter} target="_blank" rel="noopener noreferrer"
-                     className="text-blue-400 hover:text-blue-300">
-                    <FaTwitter className="text-2xl" />
-                  </a>
-                )}
-                {user?.socialLinks?.instagram && (
-                  <a href={user.socialLinks.instagram} target="_blank" rel="noopener noreferrer"
-                     className="text-pink-400 hover:text-pink-300">
-                    <FaInstagram className="text-2xl" />
-                  </a>
-                )}
+              <div className="text-center md:text-left">
+                <div className="text-2xl font-bold">{history.length}</div>
+                <div className="text-xs uppercase tracking-widest text-gray-500 mt-1">İzlenen</div>
               </div>
-
-              <div className="flex flex-wrap gap-6 text-center">
-                <div>
-                  <div className="text-2xl font-bold text-white">{stats?.stats?.moviesWatched || 0}</div>
-                  <div className="text-gray-400 text-sm">Movies</div>
-                </div>
-                <div>
-                  <div className="text-2xl font-bold text-white">{stats?.stats?.seriesWatched || 0}</div>
-                  <div className="text-gray-400 text-sm">Series</div>
-                </div>
-                <div>
-                  <div className="text-2xl font-bold text-white">{stats?.stats?.reviewsWritten || 0}</div>
-                  <div className="text-gray-400 text-sm">Reviews</div>
-                </div>
-                <div>
-                  <div className="text-2xl font-bold text-white">{stats?.stats?.followersCount || 0}</div>
-                  <div className="text-gray-400 text-sm">Followers</div>
-                </div>
+              <div className="text-center md:text-left">
+                <div className="text-2xl font-bold">{likesCount}</div>
+                <div className="text-xs uppercase tracking-widest text-gray-500 mt-1">Beğeni</div>
               </div>
-            </div>
-
-            <div className="flex flex-col gap-4">
-              <button className="px-6 py-3 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-semibold transition-all">
-                Follow
-              </button>
-              <button className="px-6 py-3 bg-gray-700 hover:bg-gray-600 text-white rounded-lg font-semibold transition-all">
-                Message
-              </button>
             </div>
           </div>
-        </motion.div>
 
-        {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-          {[
-            { icon: FaTrophy, label: 'Level', value: stats?.level || 1, color: 'yellow' },
-            { icon: FaStar, label: 'Points', value: stats?.totalPoints || 0, color: 'purple' },
-            { icon: FaFilm, label: 'Badges', value: stats?.stats?.badgesEarned || 0, color: 'blue' },
-            { icon: FaUsers, label: 'Rank', value: `#${stats?.rank || 'N/A'}`, color: 'green' },
-          ].map((stat, idx) => {
-            const Icon = stat.icon;
-            return (
-              <motion.div
-                key={idx}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: idx * 0.1 }}
-                className="bg-gray-800/50 backdrop-blur-lg rounded-xl p-6 text-center"
-              >
-                <Icon className={`text-4xl text-${stat.color}-500 mx-auto mb-2`} />
-                <div className="text-3xl font-bold text-white mb-1">{stat.value}</div>
-                <div className="text-gray-400">{stat.label}</div>
-              </motion.div>
-            );
-          })}
-        </div>
-
-        {/* Tabs */}
-        <div className="bg-gray-800/50 backdrop-blur-lg rounded-2xl overflow-hidden">
-          <div className="flex border-b border-gray-700 overflow-x-auto">
+          <div className="flex border-b border-[#1a1a1a] mb-8 overflow-x-auto scrollbar-hide">
             {tabs.map((tab) => {
               const Icon = tab.icon;
+              const isActive = activeTab === tab.id;
               return (
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
-                  className={`flex items-center gap-2 px-6 py-4 font-semibold transition-all whitespace-nowrap ${
-                    activeTab === tab.id
-                      ? 'bg-purple-600 text-white'
-                      : 'text-gray-400 hover:text-white hover:bg-gray-700/50'
+                  className={`flex items-center gap-2 px-6 py-4 border-b-2 transition-colors whitespace-nowrap ${
+                    isActive ? 'border-white text-white' : 'border-transparent text-gray-500 hover:text-gray-300'
                   }`}
                 >
                   <Icon />
-                  {tab.label}
+                  <span className="text-sm font-medium uppercase tracking-widest">{tab.label}</span>
                 </button>
               );
             })}
           </div>
 
-          <div className="p-8">
-            {activeTab === 'overview' && (
-              <div>
-                <h3 className="text-2xl font-bold text-white mb-4">About</h3>
-                <p className="text-gray-400 mb-6">{user?.bio || 'No information available'}</p>
-
-                <h3 className="text-2xl font-bold text-white mb-4">Favorite Genres</h3>
-                <div className="flex flex-wrap gap-2">
-                  {user?.preferences?.favoriteGenres?.map((genre, idx) => (
-                    <span key={idx} className="px-4 py-2 bg-purple-600/20 text-purple-400 rounded-full">
-                      {genre}
-                    </span>
-                  )) || <span className="text-gray-400">No favorite genres set</span>}
-                </div>
+          <div className="profile-content">
+            {(activeTab === 'bookmarks' || activeTab === 'history') && (
+              <div className="movie-grid">
+                {(activeTab === 'bookmarks' ? bookmarks : history).length > 0 ? (
+                  (activeTab === 'bookmarks' ? bookmarks : history).map((item) => (
+                    <Link
+                      key={item.id}
+                      to={`/${item.media_type}/${item.media_id}`}
+                      className="group relative aspect-[2/3] bg-[#0a0a0a] border border-[#1a1a1a] rounded overflow-hidden"
+                    >
+                      <img
+                        src={getImageUrl(item.poster_path, 'w342')}
+                        alt={item.title}
+                        className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110 opacity-80 group-hover:opacity-100"
+                        onError={(e) => { e.target.src = '/placeholder.jpg'; }}
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent opacity-60" />
+                      <div className="absolute bottom-0 left-0 right-0 p-4">
+                        <div className="text-[10px] uppercase tracking-tighter text-gray-400 mb-1">
+                          {item.media_type === 'movie' ? 'Film' : 'Dizi'}
+                        </div>
+                        <h4 className="text-sm font-bold line-clamp-1">{item.title}</h4>
+                      </div>
+                    </Link>
+                  ))
+                ) : (
+                  <div className="col-span-full py-24 text-center text-gray-600">
+                    <p className="text-lg">Burada henüz bir şey yok.</p>
+                  </div>
+                )}
               </div>
             )}
 
-            {activeTab === 'activity' && (
-              <div className="text-center text-gray-400 py-8">
-                Recent activity will be displayed here
-              </div>
-            )}
-
-            {activeTab === 'watchlist' && (
-              <div className="text-center text-gray-400 py-8">
-                Watchlist items will be displayed here
-              </div>
-            )}
-
-            {activeTab === 'favorites' && (
-              <div className="text-center text-gray-400 py-8">
-                Favorite items will be displayed here
-              </div>
-            )}
-
-            {activeTab === 'followers' && (
-              <div className="text-center text-gray-400 py-8">
-                Followers list will be displayed here
+            {activeTab === 'likes' && (
+              <div className="py-24 text-center text-gray-600 border border-[#1a1a1a] border-dashed rounded-lg">
+                <FaHeart className="mx-auto text-4xl mb-4 opacity-20" />
+                <p className="text-lg">{likesCount} içerik beğendin.</p>
               </div>
             )}
           </div>
         </div>
       </div>
-    </div>
+    </>
   );
 };
 

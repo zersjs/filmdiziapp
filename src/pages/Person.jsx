@@ -42,7 +42,6 @@ const Person = () => {
 
   const age = calculateAge(person.birthday, person.deathday);
 
-  // Filmografi
   const sortedCredits = {
     movies: person.movie_credits?.cast?.sort((a, b) => 
       new Date(b.release_date || 0) - new Date(a.release_date || 0)
@@ -61,10 +60,8 @@ const Person = () => {
       <div className="min-h-screen pt-20">
         <div className="container-custom">
           <div className="grid md:grid-cols-4 gap-8">
-            {/* Sidebar */}
             <aside className="md:col-span-1">
               <div className="sticky top-24">
-                {/* Profile Image */}
                 <div className="aspect-[2/3] rounded-lg overflow-hidden bg-gray-900 mb-6">
                   {person.profile_path ? (
                     <img
@@ -79,7 +76,6 @@ const Person = () => {
                   )}
                 </div>
 
-                {/* Personal Info */}
                 <div className="space-y-4">
                   <h2 className="text-xl font-bold mb-4">Kişisel Bilgiler</h2>
                   
@@ -128,7 +124,6 @@ const Person = () => {
                     </div>
                   )}
 
-                  {/* External Links */}
                   {person.external_ids && (
                     <div className="pt-4 space-y-2">
                       {person.external_ids.imdb_id && (
@@ -170,14 +165,12 @@ const Person = () => {
               </div>
             </aside>
 
-            {/* Main Content */}
             <main className="md:col-span-3">
               <h1 className="text-4xl font-bold mb-2">{person.name}</h1>
               <p className="text-gray-400 mb-6">
                 Bilinen Filmleri: {person.known_for?.map(item => item.title || item.name).join(', ')}
               </p>
 
-              {/* Biography */}
               {person.biography && (
                 <div className="mb-8">
                   <h2 className="text-2xl font-bold mb-4">Biyografi</h2>
@@ -187,7 +180,6 @@ const Person = () => {
                 </div>
               )}
 
-              {/* Filmography Tabs */}
               <div className="border-b border-gray-800 mb-6">
                 <div className="flex space-x-8">
                   <button
@@ -213,7 +205,6 @@ const Person = () => {
                 </div>
               </div>
 
-              {/* Filmography Grid */}
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
                 {activeTab === 'movies' ? (
                   sortedCredits.movies.map(credit => (

@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 
 export const useLocalStorage = (key, initialValue) => {
-  // State'i lazy initialize et
+  
   const [storedValue, setStoredValue] = useState(() => {
     try {
       const item = window.localStorage.getItem(key);
@@ -12,14 +12,12 @@ export const useLocalStorage = (key, initialValue) => {
     }
   });
 
-  // Değeri localStorage'a kaydet
   const setValue = useCallback((value) => {
     try {
-      // Fonksiyon ise çalıştır
+      
       const valueToStore = value instanceof Function ? value(storedValue) : value;
       setStoredValue(valueToStore);
       
-      // localStorage'a kaydet
       if (valueToStore === undefined) {
         window.localStorage.removeItem(key);
       } else {
@@ -30,7 +28,6 @@ export const useLocalStorage = (key, initialValue) => {
     }
   }, [key, storedValue]);
 
-  // Değeri kaldır
   const removeValue = useCallback(() => {
     try {
       window.localStorage.removeItem(key);
@@ -40,7 +37,6 @@ export const useLocalStorage = (key, initialValue) => {
     }
   }, [key, initialValue]);
 
-  // Storage event listener (diğer tab'lardan değişiklikleri dinle)
   useEffect(() => {
     const handleStorageChange = (e) => {
       if (e.key === key && e.newValue !== null) {
@@ -59,7 +55,6 @@ export const useLocalStorage = (key, initialValue) => {
   return [storedValue, setValue, removeValue];
 };
 
-// Özel localStorage hook'ları
 export const useWatchHistory = () => {
   const [history, setHistory, removeHistory] = useLocalStorage('watchHistory', []);
 
@@ -75,15 +70,13 @@ export const useWatchHistory = () => {
     };
 
     setHistory(prevHistory => {
-      // Aynı öğe varsa kaldır
+      
       const filtered = prevHistory.filter(h => 
         !(h.id === item.id && h.media_type === historyItem.media_type)
       );
       
-      // En başa ekle
       const newHistory = [historyItem, ...filtered];
       
-      // Son 50 öğeyi tut
       return newHistory.slice(0, 50);
     });
   }, [setHistory]);

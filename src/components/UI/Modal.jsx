@@ -23,7 +23,6 @@ const Modal = ({
     full: 'max-w-full mx-4'
   };
 
-  // Focus management
   useEffect(() => {
     if (isOpen) {
       previousFocusRef.current = document.activeElement;
@@ -33,7 +32,6 @@ const Modal = ({
     }
   }, [isOpen]);
 
-  // Escape key handler
   useEffect(() => {
     if (!closeOnEscape) return;
 
@@ -47,7 +45,6 @@ const Modal = ({
     return () => document.removeEventListener('keydown', handleEscape);
   }, [isOpen, onClose, closeOnEscape]);
 
-  // Body scroll lock
   useEffect(() => {
     if (isOpen) {
       document.body.style.overflow = 'hidden';
@@ -70,13 +67,11 @@ const Modal = ({
 
   return (
     <div className="fixed inset-0 z-[9999] overflow-y-auto">
-      {/* Overlay */}
       <div
         className="fixed inset-0 bg-black/75 backdrop-blur-sm transition-opacity"
         onClick={handleOverlayClick}
       />
 
-      {/* Modal */}
       <div className="flex min-h-full items-center justify-center p-4">
         <div
           ref={modalRef}
@@ -88,7 +83,6 @@ const Modal = ({
             ${className}
           `}
         >
-          {/* Header */}
           {(title || showCloseButton) && (
             <div className="flex items-center justify-between p-6 border-b border-gray-800">
               {title && (
@@ -108,7 +102,6 @@ const Modal = ({
             </div>
           )}
 
-          {/* Content */}
           <div className="p-6">
             {children}
           </div>
@@ -118,7 +111,6 @@ const Modal = ({
   );
 };
 
-// Confirmation Modal
 export const ConfirmModal = ({
   isOpen,
   onClose,
@@ -176,7 +168,6 @@ export const ConfirmModal = ({
   );
 };
 
-// Image Modal
 export const ImageModal = ({ isOpen, onClose, src, alt, title }) => {
   return (
     <Modal

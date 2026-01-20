@@ -1,7 +1,6 @@
 import '@testing-library/jest-dom';
 import { vi } from 'vitest';
 
-// Mock IntersectionObserver
 global.IntersectionObserver = class IntersectionObserver {
   constructor() {}
   disconnect() {}
@@ -9,7 +8,6 @@ global.IntersectionObserver = class IntersectionObserver {
   unobserve() {}
 };
 
-// Mock matchMedia
 Object.defineProperty(window, 'matchMedia', {
   writable: true,
   value: vi.fn().mockImplementation(query => ({
@@ -24,7 +22,6 @@ Object.defineProperty(window, 'matchMedia', {
   })),
 });
 
-// Mock localStorage
 const localStorageMock = {
   getItem: vi.fn(),
   setItem: vi.fn(),

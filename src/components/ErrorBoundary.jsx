@@ -12,18 +12,14 @@ class ErrorBoundary extends React.Component {
   }
 
   static getDerivedStateFromError(error) {
-    // State'i güncelle böylece bir sonraki render'da fallback UI gösterilir
-    return { hasError: true };
+    return { hasError: true, error };
   }
 
   componentDidCatch(error, errorInfo) {
-    // Hata detaylarını state'e kaydet
     this.setState({
       error: error,
       errorInfo: errorInfo
     });
-
-    // Hata raporlama servisi burada çağrılabilir
     console.error('ErrorBoundary caught an error:', error, errorInfo);
   }
 
@@ -39,7 +35,6 @@ class ErrorBoundary extends React.Component {
     if (this.state.hasError) {
       const { fallback: Fallback } = this.props;
       
-      // Custom fallback component varsa onu kullan
       if (Fallback) {
         return (
           <Fallback 
@@ -50,7 +45,6 @@ class ErrorBoundary extends React.Component {
         );
       }
 
-      // Default error UI
       return (
         <div className="min-h-screen bg-black text-white flex items-center justify-center p-4">
           <div className="text-center max-w-md">
@@ -79,7 +73,6 @@ class ErrorBoundary extends React.Component {
               </button>
             </div>
 
-            {/* Development modunda hata detaylarını göster */}
             {process.env.NODE_ENV === 'development' && (
               <details className="mt-6 text-left">
                 <summary className="cursor-pointer text-sm text-gray-500 hover:text-gray-300">
@@ -92,12 +85,14 @@ class ErrorBoundary extends React.Component {
                       {this.state.error && this.state.error.toString()}
                     </pre>
                   </div>
-                  <div>
-                    <strong>Stack Trace:</strong>
-                    <pre className="text-gray-400 whitespace-pre-wrap">
-                      {this.state.errorInfo.componentStack}
-                    </pre>
-                  </div>
+                  {this.state.errorInfo && (
+                    <div>
+                      <strong>Stack Trace:</strong>
+                      <pre className="text-gray-400 whitespace-pre-wrap">
+                        {this.state.errorInfo.componentStack}
+                      </pre>
+                    </div>
+                  )}
                 </div>
               </details>
             )}
@@ -110,7 +105,6 @@ class ErrorBoundary extends React.Component {
   }
 }
 
-// HOC olarak kullanım için wrapper
 export const withErrorBoundary = (Component, fallback) => {
   return function WrappedComponent(props) {
     return (
@@ -121,7 +115,6 @@ export const withErrorBoundary = (Component, fallback) => {
   };
 };
 
-// Hook olarak kullanım için
 export const useErrorHandler = () => {
   const [error, setError] = React.useState(null);
 

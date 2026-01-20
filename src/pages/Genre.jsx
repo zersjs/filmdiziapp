@@ -87,7 +87,6 @@ const Genre = () => {
                 ))}
               </div>
 
-              {/* Pagination */}
               {totalPages > 1 && (
                 <div className="flex justify-center mt-8 space-x-2">
                   <button

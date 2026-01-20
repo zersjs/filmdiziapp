@@ -2,11 +2,10 @@ import i18n from 'i18next';
 import { initReactI18next } from 'react-i18next';
 import LanguageDetector from 'i18next-browser-languagedetector';
 
-// Translation resources
 const resources = {
   tr: {
     translation: {
-      // Navigation
+      
       nav: {
         home: 'Ana Sayfa',
         movies: 'Filmler',
@@ -23,7 +22,6 @@ const resources = {
         register: 'Kayıt Ol',
       },
 
-      // Auth
       auth: {
         login: 'Giriş Yap',
         register: 'Kayıt Ol',
@@ -42,7 +40,6 @@ const resources = {
         signInWithTwitter: 'Twitter ile Giriş Yap',
       },
 
-      // Common
       common: {
         loading: 'Yükleniyor...',
         error: 'Hata',
@@ -74,7 +71,6 @@ const resources = {
         nowPlaying: 'Vizyonda',
       },
 
-      // Content
       content: {
         movies: 'Filmler',
         series: 'Diziler',
@@ -94,7 +90,6 @@ const resources = {
         country: 'Ülke',
       },
 
-      // User
       user: {
         profile: 'Profil',
         settings: 'Ayarlar',
@@ -110,7 +105,6 @@ const resources = {
         autoMode: 'Otomatik',
       },
 
-      // Messages
       messages: {
         loginSuccess: 'Başarıyla giriş yapıldı',
         logoutSuccess: 'Başarıyla çıkış yapıldı',
@@ -129,7 +123,7 @@ const resources = {
 
   en: {
     translation: {
-      // Navigation
+      
       nav: {
         home: 'Home',
         movies: 'Movies',
@@ -146,7 +140,6 @@ const resources = {
         register: 'Sign Up',
       },
 
-      // Auth
       auth: {
         login: 'Login',
         register: 'Sign Up',
@@ -165,7 +158,6 @@ const resources = {
         signInWithTwitter: 'Sign in with Twitter',
       },
 
-      // Common
       common: {
         loading: 'Loading...',
         error: 'Error',
@@ -197,7 +189,6 @@ const resources = {
         nowPlaying: 'Now Playing',
       },
 
-      // Content
       content: {
         movies: 'Movies',
         series: 'TV Shows',
@@ -217,7 +208,6 @@ const resources = {
         country: 'Country',
       },
 
-      // User
       user: {
         profile: 'Profile',
         settings: 'Settings',
@@ -233,7 +223,6 @@ const resources = {
         autoMode: 'Auto',
       },
 
-      // Messages
       messages: {
         loginSuccess: 'Successfully logged in',
         logoutSuccess: 'Successfully logged out',

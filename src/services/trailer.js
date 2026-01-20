@@ -2,7 +2,7 @@ import { playerService } from './player';
 import { movieService, tvService } from './tmdb';
 
 export const trailerService = {
-  // Ana fragman fonksiyonu - dil desteği ile
+  
   getContentTrailer: async (contentId, contentType = 'movie', preferredLanguages = ['tr', 'en']) => {
     try {
       let service = contentType === 'movie' ? movieService : tvService;
@@ -12,14 +12,12 @@ export const trailerService = {
         return { found: false };
       }
 
-      // Tüm videolardan trailer ve teaser tipleri
       const allVideos = videosResponse.data.results;
       const trailers = allVideos.filter(v => v.type.toLowerCase() === 'trailer');
       const teasers = allVideos.filter(v => v.type.toLowerCase() === 'teaser');
       
-      // Tercih edilen dillerde fragman bul
       for (const lang of preferredLanguages) {
-        // Önce fragman tipinde ara
+        
         const langTrailer = trailers.find(t => t.iso_639_1 === lang);
         if (langTrailer) {
           return {
@@ -32,7 +30,6 @@ export const trailerService = {
           };
         }
         
-        // Fragman yoksa teaser ara
         const langTeaser = teasers.find(t => t.iso_639_1 === lang);
         if (langTeaser) {
           return {
@@ -46,7 +43,6 @@ export const trailerService = {
         }
       }
       
-      // Tercih edilen dillerde bulunamazsa, herhangi bir fragman döndür
       if (trailers.length > 0) {
         const firstTrailer = trailers[0];
         return {
@@ -78,7 +74,6 @@ export const trailerService = {
     }
   },
 
-  // URL oluştur
   getTrailerUrl: (trailerData, autoplay = false) => {
     if (!trailerData || !trailerData.found || !trailerData.key) {
       return null;
@@ -88,11 +83,9 @@ export const trailerService = {
       return playerService.getYoutubeUrl(trailerData.key);
     }
     
-    // Diğer sitelere destek eklenebilir
     return null;
   },
   
-  // Fragman önizleme resmi
   getTrailerThumbnail: (trailerData) => {
     if (!trailerData || !trailerData.found || !trailerData.key) {
       return null;
@@ -105,7 +98,6 @@ export const trailerService = {
     return null;
   },
 
-  // Fragman başlık etiketini oluştur
   getTrailerLabel: (trailerData) => {
     if (!trailerData || !trailerData.found) {
       return '🎬 Fragman';

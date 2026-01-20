@@ -12,10 +12,8 @@ const useAuthStore = create(
       isLoading: false,
       error: null,
 
-      // Set user
       setUser: (user) => set({ user, isAuthenticated: !!user }),
 
-      // Set token
       setToken: (token) => {
         if (token) {
           Cookies.set('token', token, { expires: 7 });
@@ -27,7 +25,6 @@ const useAuthStore = create(
         set({ token });
       },
 
-      // Login
       login: async (credentials) => {
         set({ isLoading: true, error: null });
         try {
@@ -47,7 +44,6 @@ const useAuthStore = create(
         }
       },
 
-      // Register
       register: async (data) => {
         set({ isLoading: true, error: null });
         try {
@@ -67,7 +63,6 @@ const useAuthStore = create(
         }
       },
 
-      // Logout
       logout: async () => {
         try {
           await authAPI.logout();
@@ -83,7 +78,6 @@ const useAuthStore = create(
         }
       },
 
-      // Load user
       loadUser: async () => {
         const token = Cookies.get('token') || localStorage.getItem('token');
 
@@ -111,14 +105,12 @@ const useAuthStore = create(
         }
       },
 
-      // Update user
       updateUser: (updates) => {
         set((state) => ({
           user: { ...state.user, ...updates },
         }));
       },
 
-      // Clear error
       clearError: () => set({ error: null }),
     }),
     {

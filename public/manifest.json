@@ -1,62 +1,17 @@
 {
-  "name": "SINEFIX - Film ve Dizi İzleme Platformu",
+  "name": "SINEFIX",
   "short_name": "SINEFIX",
-  "description": "Binlerce film ve diziyi ücretsiz izleyin. En yeni içerikler, en kaliteli izleme deneyimi.",
+  "description": "Film ve Dizi İzleme Platformu",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#000000",
   "theme_color": "#000000",
-  "orientation": "portrait-primary",
-  "categories": ["entertainment", "video", "streaming"],
-  "lang": "tr",
   "icons": [
     {
       "src": "/icon.svg",
       "sizes": "any",
       "type": "image/svg+xml",
-      "purpose": "any"
-    },
-    {
-      "src": "/icon-192.png",
-      "sizes": "192x192",
-      "type": "image/png",
-      "purpose": "maskable any"
-    },
-    {
-      "src": "/icon-512.png",
-      "sizes": "512x512",
-      "type": "image/png",
-      "purpose": "maskable any"
-    }
-  ],
-  "shortcuts": [
-    {
-      "name": "Filmler",
-      "short_name": "Filmler",
-      "description": "Popüler filmleri keşfedin",
-      "url": "/movies",
-      "icons": [{ "src": "/icon.svg", "sizes": "96x96" }]
-    },
-    {
-      "name": "Diziler",
-      "short_name": "Diziler",
-      "description": "En iyi dizileri izleyin",
-      "url": "/series",
-      "icons": [{ "src": "/icon.svg", "sizes": "96x96" }]
-    },
-    {
-      "name": "Favorilerim",
-      "short_name": "Favoriler",
-      "description": "Favori içerikleriniz",
-      "url": "/favorites",
-      "icons": [{ "src": "/icon.svg", "sizes": "96x96" }]
-    },
-    {
-      "name": "İzleme Listem",
-      "short_name": "İzleme Listem",
-      "description": "Sonra izleyecekleriniz",
-      "url": "/watch-later",
-      "icons": [{ "src": "/icon.svg", "sizes": "96x96" }]
+      "purpose": "any maskable"
     }
   ]
 }

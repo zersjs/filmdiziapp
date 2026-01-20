@@ -25,7 +25,6 @@ const VideoGallery = ({ videos }) => {
         ))}
       </div>
 
-      {/* Video Modal */}
       {selectedVideo && (
         <div 
           className="fixed inset-0 bg-black/95 z-[10000] flex items-center justify-center p-4"

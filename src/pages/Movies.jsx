@@ -15,7 +15,6 @@ const Movies = () => {
   const [totalPages, setTotalPages] = useState(0);
   const [showFilters, setShowFilters] = useState(false);
 
-  // Filter values
   const sort = searchParams.get('sort') || 'popular';
   const genre = searchParams.get('genre') || '';
   const year = searchParams.get('year') || '';
@@ -44,7 +43,7 @@ const Movies = () => {
       let response;
 
       if (sort === 'popular' || sort === 'top_rated' || sort === 'now_playing' || sort === 'upcoming') {
-        // Predefined lists
+        
         switch (sort) {
           case 'popular':
             response = await movieService.getPopular(page);
@@ -60,7 +59,7 @@ const Movies = () => {
             break;
         }
       } else {
-        // Custom discover query
+        
         const params = {
           page,
           sort_by: getSortBy(sort),
@@ -118,7 +117,6 @@ const Movies = () => {
 
       <div className="min-h-screen pt-20">
         <div className="container-custom">
-          {/* Header */}
           <div className="flex items-center justify-between mb-8">
             <h1 className="text-3xl font-bold">Filmler</h1>
             <button
@@ -131,19 +129,17 @@ const Movies = () => {
           </div>
 
           <div className="flex gap-8">
-            {/* Filters Sidebar */}
             <aside className={`w-full md:w-64 flex-shrink-0 ${showFilters ? 'block' : 'hidden md:block'}`}>
-              <div className="bg-gray-900 rounded-lg p-6 space-y-6">
-                {/* Sort */}
+              <div className="bg-[#0a0a0a] border border-[#1a1a1a] rounded-lg p-6 space-y-6">
                 <div>
-                  <h3 className="font-semibold mb-3 flex items-center">
+                  <h3 className="font-semibold mb-3 flex items-center text-sm uppercase tracking-wider text-gray-400">
                     <FaSortAmountDown className="mr-2" />
                     Sıralama
                   </h3>
                   <select
                     value={sort}
                     onChange={(e) => updateFilter('sort', e.target.value)}
-                    className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 focus:outline-none focus:border-gray-500"
+                    className="w-full bg-black border border-[#222] text-white rounded px-3 py-2 text-sm focus:outline-none focus:border-gray-500"
                   >
                     <option value="popular">Popüler</option>
                     <option value="top_rated">En Yüksek Puan</option>
@@ -155,16 +151,15 @@ const Movies = () => {
                   </select>
                 </div>
 
-                {/* Genre Filter */}
                 <div>
-                  <h3 className="font-semibold mb-3 flex items-center">
+                  <h3 className="font-semibold mb-3 flex items-center text-sm uppercase tracking-wider text-gray-400">
                     <FaGlobe className="mr-2" />
                     Tür
                   </h3>
                   <select
                     value={genre}
                     onChange={(e) => updateFilter('genre', e.target.value)}
-                    className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 focus:outline-none focus:border-gray-500"
+                    className="w-full bg-black border border-[#222] text-white rounded px-3 py-2 text-sm focus:outline-none focus:border-gray-500"
                   >
                     <option value="">Tüm Türler</option>
                     {genres.map(g => (
@@ -173,16 +168,15 @@ const Movies = () => {
                   </select>
                 </div>
 
-                {/* Year Filter */}
                 <div>
-                  <h3 className="font-semibold mb-3 flex items-center">
+                  <h3 className="font-semibold mb-3 flex items-center text-sm uppercase tracking-wider text-gray-400">
                     <FaCalendar className="mr-2" />
                     Yıl
                   </h3>
                   <select
                     value={year}
                     onChange={(e) => updateFilter('year', e.target.value)}
-                    className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 focus:outline-none focus:border-gray-500"
+                    className="w-full bg-black border border-[#222] text-white rounded px-3 py-2 text-sm focus:outline-none focus:border-gray-500"
                   >
                     <option value="">Tüm Yıllar</option>
                     {Array.from({ length: 50 }, (_, i) => new Date().getFullYear() - i).map(y => (
@@ -191,16 +185,15 @@ const Movies = () => {
                   </select>
                 </div>
 
-                {/* Rating Filter */}
                 <div>
-                  <h3 className="font-semibold mb-3 flex items-center">
+                  <h3 className="font-semibold mb-3 flex items-center text-sm uppercase tracking-wider text-gray-400">
                     <FaStar className="mr-2" />
-                    Minimum Puan
+                    Puan
                   </h3>
                   <select
                     value={rating}
                     onChange={(e) => updateFilter('rating', e.target.value)}
-                    className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 focus:outline-none focus:border-gray-500"
+                    className="w-full bg-black border border-[#222] text-white rounded px-3 py-2 text-sm focus:outline-none focus:border-gray-500"
                   >
                     <option value="">Tüm Puanlar</option>
                     <option value="9">9+ Puan</option>
@@ -211,11 +204,10 @@ const Movies = () => {
                   </select>
                 </div>
 
-                {/* Clear Filters */}
                 {(genre || year || rating || sort !== 'popular') && (
                   <button
                     onClick={clearFilters}
-                    className="w-full py-2 bg-gray-800 rounded-lg hover:bg-gray-700 transition-colors text-sm"
+                    className="w-full py-2 text-xs uppercase tracking-widest text-gray-500 hover:text-white transition-colors border border-[#222] rounded"
                   >
                     Filtreleri Temizle
                   </button>
@@ -223,35 +215,33 @@ const Movies = () => {
               </div>
             </aside>
 
-            {/* Movies Grid */}
             <main className="flex-grow">
               {loading ? (
                 <Loading fullScreen={false} />
               ) : (
                 <>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+                  <div className="movie-grid">
                     {movies.map(movie => (
                       <MovieCard key={movie.id} item={movie} mediaType="movie" />
                     ))}
                   </div>
 
-                  {/* Pagination */}
                   {totalPages > 1 && (
-                    <div className="flex justify-center mt-8 space-x-2">
+                    <div className="flex justify-center mt-12 space-x-2">
                       <button
                         onClick={() => setPage(Math.max(1, page - 1))}
                         disabled={page === 1}
-                        className="px-4 py-2 bg-gray-800 rounded-lg hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                        className="btn-secondary"
                       >
                         Önceki
                       </button>
-                      <span className="px-4 py-2">
-                        {page} / {totalPages}
+                      <span className="flex items-center px-4 font-medium">
+                         {page} / {Math.min(totalPages, 500)}
                       </span>
                       <button
                         onClick={() => setPage(Math.min(totalPages, page + 1))}
                         disabled={page === totalPages}
-                        className="px-4 py-2 bg-gray-800 rounded-lg hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                        className="btn-secondary"
                       >
                         Sonraki
                       </button>

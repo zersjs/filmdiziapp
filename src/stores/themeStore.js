@@ -4,16 +4,14 @@ import { persist } from 'zustand/middleware';
 const useThemeStore = create(
   persist(
     (set, get) => ({
-      theme: 'dark', // 'dark' | 'light' | 'auto'
-      actualTheme: 'dark', // The actual applied theme
+      theme: 'dark', 
+      actualTheme: 'dark', 
 
-      // Set theme
       setTheme: (theme) => {
         set({ theme });
         get().applyTheme(theme);
       },
 
-      // Apply theme to document
       applyTheme: (theme) => {
         let actualTheme = theme;
 
@@ -29,19 +27,16 @@ const useThemeStore = create(
         set({ actualTheme });
       },
 
-      // Toggle theme (between dark and light only)
       toggleTheme: () => {
         const currentTheme = get().theme;
         const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
         get().setTheme(newTheme);
       },
 
-      // Initialize theme
       initTheme: () => {
         const { theme } = get();
         get().applyTheme(theme);
 
-        // Listen for system theme changes if auto
         window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e) => {
           if (get().theme === 'auto') {
             get().applyTheme('auto');

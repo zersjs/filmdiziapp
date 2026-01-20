@@ -1,10 +1,8 @@
 import React, { useState, useEffect, createContext, useContext } from 'react';
 import { FaCheck, FaTimes, FaExclamationTriangle, FaInfoCircle } from 'react-icons/fa';
 
-// Toast Context
 const ToastContext = createContext();
 
-// Toast Provider
 export const ToastProvider = ({ children }) => {
   const [toasts, setToasts] = useState([]);
 
@@ -14,7 +12,6 @@ export const ToastProvider = ({ children }) => {
     
     setToasts(prev => [...prev, toast]);
 
-    // Auto remove
     if (duration > 0) {
       setTimeout(() => {
         removeToast(id);
@@ -40,7 +37,6 @@ export const ToastProvider = ({ children }) => {
   );
 };
 
-// Toast Hook
 export const useToast = () => {
   const context = useContext(ToastContext);
   if (!context) {
@@ -61,7 +57,6 @@ export const useToast = () => {
   };
 };
 
-// Toast Container
 const ToastContainer = ({ toasts, onRemove }) => {
   if (toasts.length === 0) return null;
 
@@ -78,13 +73,12 @@ const ToastContainer = ({ toasts, onRemove }) => {
   );
 };
 
-// Toast Item
 const ToastItem = ({ toast, onRemove }) => {
   const [isVisible, setIsVisible] = useState(false);
   const [isRemoving, setIsRemoving] = useState(false);
 
   useEffect(() => {
-    // Animate in
+    
     setTimeout(() => setIsVisible(true), 10);
   }, []);
 

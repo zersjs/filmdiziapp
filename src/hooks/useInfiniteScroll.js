@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 
 export const useInfiniteScroll = (options = {}) => {
   const {
-    threshold = 100, // Sayfa sonuna kaç pixel kala tetiklensin
+    threshold = 100, 
     rootMargin = '0px',
     enabled = true
   } = options;
@@ -11,12 +11,10 @@ export const useInfiniteScroll = (options = {}) => {
   const observerRef = useRef();
   const callbackRef = useRef();
 
-  // Scroll callback'ini kaydet
   const setCallback = useCallback((callback) => {
     callbackRef.current = callback;
   }, []);
 
-  // Intersection Observer ile scroll detection
   useEffect(() => {
     if (!enabled) return;
 
@@ -54,7 +52,6 @@ export const useInfiniteScroll = (options = {}) => {
   };
 };
 
-// Scroll pozisyonu için hook (with throttle for performance)
 export const useScrollPosition = () => {
   const [scrollPosition, setScrollPosition] = useState({
     x: 0,
@@ -88,7 +85,6 @@ export const useScrollPosition = () => {
   return scrollPosition;
 };
 
-// Sayfa sonuna gelme detection hook'u (with throttle for performance)
 export const useScrollToBottom = (callback, threshold = 100) => {
   const [isNearBottom, setIsNearBottom] = useState(false);
 

@@ -50,7 +50,6 @@ const ReviewCard = ({ review, isExpanded, onToggle }) => {
   return (
     <div className="bg-gray-900 rounded-lg p-6">
       <div className="flex items-start space-x-4">
-        {/* Avatar */}
         <div className="flex-shrink-0">
           {avatarUrl ? (
             <img
@@ -65,7 +64,6 @@ const ReviewCard = ({ review, isExpanded, onToggle }) => {
           )}
         </div>
 
-        {/* Content */}
         <div className="flex-grow">
           <div className="flex items-center justify-between mb-2">
             <div>

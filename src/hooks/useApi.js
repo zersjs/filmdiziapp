@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
 
-// API çağrıları için genel hook
 export const useApi = (apiFunction, dependencies = [], options = {}) => {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -54,7 +53,6 @@ export const useApi = (apiFunction, dependencies = [], options = {}) => {
   };
 };
 
-// Sayfalama ile API çağrıları için hook
 export const usePaginatedApi = (apiFunction, options = {}) => {
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(false);

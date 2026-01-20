@@ -1,7 +1,6 @@
 import React, { createContext, useContext, useReducer, useEffect } from 'react';
 import { useLocalStorage } from '../hooks/useLocalStorage';
 
-// Initial state
 const initialState = {
   user: null,
   favorites: [],
@@ -25,41 +24,34 @@ const initialState = {
   }
 };
 
-// Action types
 export const ActionTypes = {
-  // User actions
+  
   SET_USER: 'SET_USER',
   LOGOUT_USER: 'LOGOUT_USER',
   
-  // Favorites actions
   ADD_FAVORITE: 'ADD_FAVORITE',
   REMOVE_FAVORITE: 'REMOVE_FAVORITE',
   SET_FAVORITES: 'SET_FAVORITES',
   CLEAR_FAVORITES: 'CLEAR_FAVORITES',
   
-  // Watch Later actions
   ADD_WATCH_LATER: 'ADD_WATCH_LATER',
   REMOVE_WATCH_LATER: 'REMOVE_WATCH_LATER',
   SET_WATCH_LATER: 'SET_WATCH_LATER',
   CLEAR_WATCH_LATER: 'CLEAR_WATCH_LATER',
   
-  // Watch history actions
   ADD_TO_HISTORY: 'ADD_TO_HISTORY',
   REMOVE_FROM_HISTORY: 'REMOVE_FROM_HISTORY',
   CLEAR_HISTORY: 'CLEAR_HISTORY',
   SET_HISTORY: 'SET_HISTORY',
   
-  // Continue Watching actions
   ADD_CONTINUE_WATCHING: 'ADD_CONTINUE_WATCHING',
   REMOVE_CONTINUE_WATCHING: 'REMOVE_CONTINUE_WATCHING',
   SET_CONTINUE_WATCHING: 'SET_CONTINUE_WATCHING',
   UPDATE_CONTINUE_WATCHING: 'UPDATE_CONTINUE_WATCHING',
   
-  // Settings actions
   UPDATE_SETTING: 'UPDATE_SETTING',
   RESET_SETTINGS: 'RESET_SETTINGS',
   
-  // UI actions
   SET_LOADING: 'SET_LOADING',
   SET_ERROR: 'SET_ERROR',
   CLEAR_ERROR: 'CLEAR_ERROR',
@@ -68,7 +60,6 @@ export const ActionTypes = {
   SET_CURRENT_PAGE: 'SET_CURRENT_PAGE'
 };
 
-// Reducer
 const appReducer = (state, action) => {
   switch (action.type) {
     case ActionTypes.SET_USER:
@@ -275,10 +266,8 @@ const appReducer = (state, action) => {
   }
 };
 
-// Context
 const AppContext = createContext();
 
-// Provider component
 export const AppProvider = ({ children }) => {
   const [state, dispatch] = useReducer(appReducer, initialState);
   const [favorites, setFavorites] = useLocalStorage('favorites', []);
@@ -287,7 +276,6 @@ export const AppProvider = ({ children }) => {
   const [continueWatching, setContinueWatching] = useLocalStorage('continueWatching', []);
   const [settings, setSettings] = useLocalStorage('userSettings', initialState.settings);
 
-  // LocalStorage'dan veri yükle
   useEffect(() => {
     dispatch({ type: ActionTypes.SET_FAVORITES, payload: favorites });
     dispatch({ type: ActionTypes.SET_WATCH_LATER, payload: watchLater });
@@ -296,38 +284,31 @@ export const AppProvider = ({ children }) => {
     dispatch({ type: ActionTypes.UPDATE_SETTING, payload: { key: 'settings', value: settings } });
   }, []);
 
-  // Favorites değiştiğinde localStorage'a kaydet
   useEffect(() => {
     setFavorites(state.favorites);
   }, [state.favorites, setFavorites]);
 
-  // Watch Later değiştiğinde localStorage'a kaydet
   useEffect(() => {
     setWatchLater(state.watchLater);
   }, [state.watchLater, setWatchLater]);
 
-  // Watch history değiştiğinde localStorage'a kaydet
   useEffect(() => {
     setWatchHistory(state.watchHistory);
   }, [state.watchHistory, setWatchHistory]);
 
-  // Continue Watching değiştiğinde localStorage'a kaydet
   useEffect(() => {
     setContinueWatching(state.continueWatching);
   }, [state.continueWatching, setContinueWatching]);
 
-  // Settings değiştiğinde localStorage'a kaydet
   useEffect(() => {
     setSettings(state.settings);
   }, [state.settings, setSettings]);
 
-  // Action creators
   const actions = {
-    // User actions
+    
     setUser: (user) => dispatch({ type: ActionTypes.SET_USER, payload: user }),
     logoutUser: () => dispatch({ type: ActionTypes.LOGOUT_USER }),
     
-    // Favorites actions
     addFavorite: (item) => {
       const favoriteItem = {
         id: item.id,
@@ -359,7 +340,6 @@ export const AppProvider = ({ children }) => {
       }
     },
     
-    // Watch Later actions
     addWatchLater: (item) => {
       const watchLaterItem = {
         id: item.id,
@@ -391,7 +371,6 @@ export const AppProvider = ({ children }) => {
       }
     },
     
-    // Watch history actions
     addToHistory: (item) => {
       const historyItem = {
         id: item.id,
@@ -410,15 +389,14 @@ export const AppProvider = ({ children }) => {
     
     clearHistory: () => dispatch({ type: ActionTypes.CLEAR_HISTORY }),
     
-    // Continue Watching actions
     addContinueWatching: (item, progress = 0, duration = 0) => {
       const continueWatchingItem = {
         id: item.id,
         title: item.title || item.name,
         poster_path: item.poster_path,
         media_type: item.media_type || 'movie',
-        progress: progress, // in seconds
-        duration: duration, // in seconds
+        progress: progress, 
+        duration: duration, 
         percentage: duration > 0 ? Math.round((progress / duration) * 100) : 0,
         lastWatchedAt: new Date().toISOString(),
         season: item.season,
@@ -442,13 +420,11 @@ export const AppProvider = ({ children }) => {
       dispatch({ type: ActionTypes.UPDATE_CONTINUE_WATCHING, payload });
     },
     
-    // Settings actions
     updateSetting: (key, value) => 
       dispatch({ type: ActionTypes.UPDATE_SETTING, payload: { key, value } }),
     
     resetSettings: () => dispatch({ type: ActionTypes.RESET_SETTINGS }),
     
-    // UI actions
     setLoading: (loading) => dispatch({ type: ActionTypes.SET_LOADING, payload: loading }),
     setError: (error) => dispatch({ type: ActionTypes.SET_ERROR, payload: error }),
     clearError: () => dispatch({ type: ActionTypes.CLEAR_ERROR }),
@@ -464,7 +440,6 @@ export const AppProvider = ({ children }) => {
   );
 };
 
-// Custom hook
 export const useApp = () => {
   const context = useContext(AppContext);
   if (!context) {

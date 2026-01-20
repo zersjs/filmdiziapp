@@ -76,7 +76,6 @@ const FAQ = () => {
       <div className="container-custom py-12">
         <h1 className="text-4xl md:text-5xl font-bold mb-8 text-center">Sıkça Sorulan Sorular</h1>
         
-        {/* Arama Kutusu */}
         <div className="max-w-2xl mx-auto mb-12">
           <div className="relative">
             <input
@@ -90,7 +89,6 @@ const FAQ = () => {
           </div>
         </div>
         
-        {/* FAQ Accordion */}
         <div className="max-w-3xl mx-auto space-y-4">
           {filteredFAQs.length > 0 ? (
             filteredFAQs.map((item, index) => (
@@ -115,7 +113,6 @@ const FAQ = () => {
           )}
         </div>
         
-        {/* İletişim CTA */}
         <div className="mt-16 text-center">
           <h3 className="text-2xl font-semibold mb-4">Sorunuza cevap bulamadınız mı?</h3>
           <p className="text-gray-300 mb-6 max-w-2xl mx-auto">

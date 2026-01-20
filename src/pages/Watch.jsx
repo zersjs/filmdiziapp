@@ -29,7 +29,6 @@ const Watch = () => {
     }
   }, [selectedSeason, content]);
 
-  // Close dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
@@ -50,7 +49,7 @@ const Watch = () => {
       if (type === 'movie') {
         const response = await movieService.getDetail(id);
         setContent(response.data);
-        // Sadece vidsrc ve vidfast sağlayıcıları
+        
         const defaultProviders = ['vidsrc', 'vidfast'];
         const urls = playerService.getMovieUrl(id, defaultProviders);
         setPlayerUrls(urls);
@@ -103,7 +102,6 @@ const Watch = () => {
   const title = content.title || content.name;
   const currentUrl = playerUrls[selectedProvider]?.url;
 
-  // Get quality label for provider
   const getQualityLabel = (provider) => {
     if (provider.quality) {
       return (
@@ -115,7 +113,6 @@ const Watch = () => {
     return null;
   };
 
-  // Get text for selected provider button
   const getSelectedProviderText = () => {
     if (!playerUrls.length) return 'Kaynak Seçin';
     
@@ -136,51 +133,45 @@ const Watch = () => {
       </Helmet>
 
       <div className="min-h-screen bg-black">
-        {/* Header */}
         <div className="bg-gray-950 border-b border-gray-900 pt-16">
           <div className="container-custom py-4">
-            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-              <div className="flex items-center space-x-4">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+              <div className="flex items-center space-x-3 sm:space-x-4">
                 <Link
                   to={type === 'movie' ? `/movie/${id}` : `/tv/${id}`}
-                  className="p-2 bg-gray-800 rounded-lg hover:bg-gray-700 transition-colors"
+                  className="p-2.5 bg-white/5 border border-white/5 rounded-xl hover:bg-white/10 transition-all"
                 >
-                  <FaArrowLeft />
+                  <FaArrowLeft className="text-sm" />
                 </Link>
-                <div>
-                  <h1 className="text-xl font-bold">{title}</h1>
+                <div className="min-w-0">
+                  <h1 className="text-lg sm:text-xl font-bold truncate leading-tight">{title}</h1>
                   {type === 'tv' && seasonData && (
-                    <p className="text-sm text-gray-400">
-                      Sezon {selectedSeason} - Bölüm {selectedEpisode}: 
-                      {seasonData.episodes?.[selectedEpisode - 1]?.name}
+                    <p className="text-[10px] sm:text-xs text-gray-500 uppercase tracking-widest mt-0.5">
+                      S{selectedSeason} E{selectedEpisode} • {seasonData.episodes?.[selectedEpisode - 1]?.name}
                     </p>
                   )}
                 </div>
               </div>
               
-              {/* Provider Dropdown */}
-              <div className="relative" ref={dropdownRef}>
+              <div className="relative w-full sm:w-auto" ref={dropdownRef}>
                 <button 
                   onClick={() => setDropdownOpen(!dropdownOpen)}
-                  className="flex items-center space-x-2 px-4 py-2 bg-gray-800 hover:bg-gray-700 transition-colors rounded-lg"
+                  className="w-full flex items-center justify-between sm:justify-start space-x-3 px-5 py-2.5 bg-[#050505] border border-white/5 hover:border-white/20 transition-all rounded-xl text-xs font-bold tracking-widest uppercase"
                 >
-                  {getSelectedProviderText()}
-                  <FaChevronDown className={`ml-2 transition-transform ${dropdownOpen ? 'rotate-180' : ''}`} />
+                  <span className="flex items-center gap-2">
+                    <div className="w-1.5 h-1.5 rounded-full bg-red-600 animate-pulse"/>
+                    {getSelectedProviderText()}
+                  </span>
+                  <FaChevronDown className={`ml-2 transition-transform duration-300 ${dropdownOpen ? 'rotate-180' : ''}`} />
                 </button>
                 
                 {dropdownOpen && (
-                  <div className="absolute right-0 mt-2 w-60 max-h-96 overflow-y-auto bg-gray-900 rounded-lg shadow-lg z-50 border border-gray-800 py-1">
+                  <div className="absolute right-0 mt-2 w-full sm:w-64 max-h-96 overflow-y-auto bg-[#0a0a0a] border border-white/10 rounded-2xl shadow-2xl z-50 py-2 animate-fade-in-up">
+                    <div className="px-4 py-2 mb-1">
+                      <p className="text-[9px] font-black text-gray-600 uppercase tracking-[0.2em]">Kaynak Seçenekleri</p>
+                    </div>
                     {playerUrls.map((provider, index) => {
-                      // Custom styles based on provider type
-                      const getItemStyles = () => {
-                        // Selected item
-                        if (selectedProvider === index) {
-                          return "bg-gray-700";
-                        }
-                        // Default
-                        return "hover:bg-gray-800";
-                      };
-                      
+                      const isActive = selectedProvider === index;
                       return (
                         <button
                           key={index}
@@ -188,23 +179,17 @@ const Watch = () => {
                             setSelectedProvider(index);
                             setDropdownOpen(false);
                           }}
-                          className={`w-full flex items-center px-4 py-2 text-left ${getItemStyles()} text-white transition-colors`}
+                          className={`w-full flex items-center px-4 py-3.5 text-left transition-all ${isActive ? 'bg-white/10 text-white' : 'text-gray-500 hover:bg-white/5 hover:text-white'}`}
                         >
                           <div className="flex items-center justify-between w-full">
-                            <div className="flex items-center">
-                              <span>{provider.name}</span>
-                            </div>
-                            
+                            <span className="text-[11px] font-bold uppercase tracking-widest">{provider.name}</span>
                             {provider.quality && (
-                              <span className="text-xs px-1.5 py-0.5 bg-gray-800/60 rounded">
+                              <span className="text-[9px] font-black px-2 py-0.5 bg-white/5 rounded-md uppercase tracking-tighter">
                                 {provider.quality}
                               </span>
                             )}
                           </div>
-                          
-                          {selectedProvider === index && (
-                            <div className="ml-2 w-1.5 h-1.5 bg-blue-500 rounded-full"></div>
-                          )}
+                          {isActive && <div className="ml-3 w-1.5 h-1.5 bg-red-600 rounded-full shadow-[0_0_8px_rgba(220,38,38,0.8)]"></div>}
                         </button>
                       );
                     })}
@@ -217,11 +202,8 @@ const Watch = () => {
 
         <div className="container-custom py-6">
           <div className="grid lg:grid-cols-4 gap-6">
-            {/* Player Section */}
             <div className="lg:col-span-3">
-              {/* Player */}
               <div className="relative aspect-video bg-black rounded-lg overflow-hidden mb-4 group">
-                {/* Backdrop Image with Play Button */}
                 {!currentUrl && (
                   <div className="absolute inset-0">
                     <img
@@ -242,7 +224,6 @@ const Watch = () => {
                   </div>
                 )}
 
-                {/* Video Player */}
                 {currentUrl && (
                   <iframe
                     src={currentUrl}
@@ -253,7 +234,6 @@ const Watch = () => {
                   />
                 )}
 
-                {/* Loading State */}
                 {!currentUrl && !content.backdrop_path && (
                   <div className="flex items-center justify-center h-full bg-gray-800">
                     <div className="text-center">
@@ -268,11 +248,10 @@ const Watch = () => {
                 )}
               </div>
 
-              {/* Episode Description for TV Shows */}
               {type === 'tv' && seasonData?.episodes?.[selectedEpisode - 1] && (
-                <div className="bg-gray-900 rounded-lg p-6 mb-4">
-                  <div className="flex items-start space-x-4 mb-4">
-                    <div className="flex-shrink-0 w-32 h-20 bg-gray-800 rounded-lg overflow-hidden">
+                <div className="bg-[#050505] border border-white/5 rounded-2xl p-5 sm:p-8 mb-6">
+                  <div className="flex flex-col md:flex-row gap-6 mb-8">
+                    <div className="flex-shrink-0 w-full md:w-56 aspect-video bg-black rounded-xl overflow-hidden shadow-2xl border border-white/5">
                       {seasonData.episodes[selectedEpisode - 1].still_path ? (
                         <img
                           src={getImageUrl(seasonData.episodes[selectedEpisode - 1].still_path, 'w300')}
@@ -285,119 +264,115 @@ const Watch = () => {
                         </div>
                       )}
                     </div>
-                    <div className="flex-1">
-                      <h2 className="text-xl font-bold mb-2">
-                        S{selectedSeason}E{selectedEpisode}: {seasonData.episodes[selectedEpisode - 1].name}
+                    <div className="flex-1 min-w-0">
+                      <h2 className="text-xl sm:text-2xl font-bold mb-3 truncate italic uppercase tracking-tighter">
+                        S{selectedSeason}E{selectedEpisode} • {seasonData.episodes[selectedEpisode - 1].name}
                       </h2>
-                      <div className="flex items-center space-x-4 text-sm text-gray-400 mb-3">
+                      <div className="flex flex-wrap items-center gap-4 text-[10px] font-bold uppercase tracking-widest text-gray-500">
                         {seasonData.episodes[selectedEpisode - 1].air_date && (
-                          <span>📅 {new Date(seasonData.episodes[selectedEpisode - 1].air_date).toLocaleDateString('tr-TR')}</span>
+                          <span className="px-2 py-0.5 bg-white/5 rounded">📅 {new Date(seasonData.episodes[selectedEpisode - 1].air_date).getFullYear()}</span>
                         )}
                         {seasonData.episodes[selectedEpisode - 1].runtime && (
-                          <span>⏱️ {seasonData.episodes[selectedEpisode - 1].runtime} dk</span>
+                          <span className="px-2 py-0.5 bg-white/5 rounded">⏱️ {seasonData.episodes[selectedEpisode - 1].runtime} DK</span>
                         )}
                         {seasonData.episodes[selectedEpisode - 1].vote_average > 0 && (
-                          <span>⭐ {seasonData.episodes[selectedEpisode - 1].vote_average.toFixed(1)}</span>
+                          <span className="px-2 py-0.5 bg-white/5 rounded text-yellow-500">⭐ {seasonData.episodes[selectedEpisode - 1].vote_average.toFixed(1)}</span>
                         )}
                       </div>
                     </div>
                   </div>
-                  <p className="text-gray-300 leading-relaxed">
-                    {seasonData.episodes[selectedEpisode - 1].overview || 'Bu bölüm için açıklama bulunmuyor.'}
+                  <p className="text-gray-400 text-sm sm:text-base leading-relaxed pt-8 border-t border-white/5 font-light">
+                    {seasonData.episodes[selectedEpisode - 1].overview || 'Bu bölüm için detaylar henüz paylaşılmadı.'}
                   </p>
                 </div>
               )}
 
-              {/* General Description */}
-              <div className="bg-gray-900 rounded-lg p-6">
-                <h2 className="text-xl font-bold mb-4">
-                  {type === 'tv' ? 'Dizi Hakkında' : 'Film Hakkında'}
+              <div className="bg-[#050505] border border-white/5 rounded-2xl p-6 sm:p-8">
+                <h2 className="text-[10px] font-black uppercase tracking-[0.3em] text-gray-600 mb-6">
+                  {type === 'tv' ? 'DİZİ DETAYLARI' : 'FİLM DETAYLARI'}
                 </h2>
-                <p className="text-gray-300 leading-relaxed">
+                <p className="text-gray-400 leading-relaxed text-sm sm:text-base font-light">
                   {content.overview}
                 </p>
                 
-                {/* Additional Info */}
-                <div className="mt-6 grid grid-cols-2 md:grid-cols-3 gap-4 pt-4 border-t border-gray-800">
+                <div className="mt-10 grid grid-cols-2 sm:grid-cols-3 gap-6 pt-8 border-t border-white/5">
                   <div>
-                    <p className="text-sm text-gray-400">Tür</p>
-                    <p className="text-white font-medium">
-                      {content.genres?.map(g => g.name).join(', ') || 'Bilinmiyor'}
+                    <p className="text-[9px] font-bold text-gray-600 uppercase tracking-widest mb-1">Kategori</p>
+                    <p className="text-white text-xs font-bold truncate">
+                      {content.genres?.[0]?.name || 'Genel'}
                     </p>
                   </div>
                   <div>
-                    <p className="text-sm text-gray-400">Yıl</p>
-                    <p className="text-white font-medium">
+                    <p className="text-[9px] font-bold text-gray-600 uppercase tracking-widest mb-1">Yıl</p>
+                    <p className="text-white text-xs font-bold">
                       {new Date(content.release_date || content.first_air_date).getFullYear()}
                     </p>
                   </div>
                   <div>
-                    <p className="text-sm text-gray-400">Puan</p>
-                    <p className="text-white font-medium">
-                      ⭐ {content.vote_average.toFixed(1)}/10
+                    <p className="text-[9px] font-bold text-gray-600 uppercase tracking-widest mb-1">IMDB</p>
+                    <p className="text-white text-xs font-bold flex items-center gap-1">
+                      ⭐ {content.vote_average.toFixed(1)}
                     </p>
                   </div>
                 </div>
               </div>
             </div>
 
-            {/* Sidebar */}
             <div className="lg:col-span-1 space-y-4">
-              {/* TV Show Episodes */}
               {type === 'tv' && content.seasons && (
-                <div className="bg-gray-900 rounded-lg p-4">
-                  <h3 className="font-semibold mb-4 flex items-center">
-                    <FaTv className="mr-2" />
-                    Bölümler
+                <div className="bg-[#050505] border border-white/5 rounded-2xl p-5 sm:p-6">
+                  <h3 className="text-[10px] font-black uppercase tracking-[0.3em] text-gray-600 mb-6 flex items-center">
+                    <FaTv className="mr-3" />
+                    BÖLÜM LİSTESİ
                   </h3>
 
-                  {/* Season Selector */}
-                  <select
-                    value={selectedSeason}
-                    onChange={(e) => handleSeasonChange(Number(e.target.value))}
-                    className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 mb-4 focus:outline-none focus:border-gray-500"
-                  >
-                    {content.seasons
-                      .filter(season => season.season_number > 0)
-                      .map(season => (
-                        <option key={season.season_number} value={season.season_number}>
-                          Sezon {season.season_number}
-                        </option>
-                      ))}
-                  </select>
+                  <div className="mb-6">
+                    <select
+                      value={selectedSeason}
+                      onChange={(e) => handleSeasonChange(Number(e.target.value))}
+                      className="w-full bg-[#0a0a0a] border border-white/10 text-white rounded-xl px-4 py-3 text-xs font-bold tracking-widest uppercase focus:outline-none focus:border-white/30 transition-all appearance-none cursor-pointer"
+                    >
+                      {content.seasons
+                        .filter(season => season.season_number > 0)
+                        .map(season => (
+                          <option key={season.season_number} value={season.season_number}>
+                            SEZON {season.season_number}
+                          </option>
+                        ))}
+                    </select>
+                  </div>
 
-                  {/* Episode List */}
-                  <div className="space-y-2 max-h-96 overflow-y-auto">
+                  <div className="space-y-3 max-h-[50vh] sm:max-h-96 overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-white/10">
                     {seasonData?.episodes?.map(episode => (
                       <button
                         key={episode.episode_number}
                         onClick={() => handleEpisodeChange(episode.episode_number)}
-                        className={`w-full text-left p-3 rounded-lg transition-colors ${
+                        className={`w-full text-left p-3 rounded-xl transition-all duration-300 ${
                           selectedEpisode === episode.episode_number
-                            ? 'bg-gray-800 border border-gray-600'
-                            : 'hover:bg-gray-800'
+                            ? 'bg-white text-black scale-[0.98]'
+                            : 'bg-white/5 border border-white/5 text-gray-400 hover:bg-white/10 hover:text-white'
                         }`}
                       >
-                        <div className="flex items-start space-x-3">
-                          <div className="flex-shrink-0 w-20 h-12 bg-gray-800 rounded overflow-hidden">
+                        <div className="flex items-center space-x-4">
+                          <div className={`flex-shrink-0 w-16 h-10 rounded-lg overflow-hidden border ${selectedEpisode === episode.episode_number ? 'border-black/20' : 'border-white/5'}`}>
                             {episode.still_path ? (
                               <img
                                 src={getImageUrl(episode.still_path, 'w185')}
                                 alt={episode.name}
-                                className="w-full h-full object-cover"
+                                className={`w-full h-full object-cover ${selectedEpisode === episode.episode_number ? 'grayscale-0' : 'grayscale group-hover:grayscale-0'}`}
                               />
                             ) : (
-                              <div className="w-full h-full flex items-center justify-center">
-                                <FaTv className="text-gray-600" />
+                              <div className="w-full h-full flex items-center justify-center bg-black/40">
+                                <FaTv className="text-xs" />
                               </div>
                             )}
                           </div>
                           <div className="flex-grow min-w-0">
-                            <p className="text-sm font-medium line-clamp-1">
+                            <p className="text-[11px] font-black uppercase tracking-tight truncate">
                               {episode.episode_number}. {episode.name}
                             </p>
-                            <p className="text-xs text-gray-400">
-                              {episode.runtime ? `${episode.runtime} dk` : ''}
+                            <p className={`text-[9px] font-bold uppercase tracking-widest mt-0.5 ${selectedEpisode === episode.episode_number ? 'text-black/50' : 'text-gray-600'}`}>
+                              {episode.runtime ? `${episode.runtime} DK` : 'BELİRSİZ'}
                             </p>
                           </div>
                         </div>
@@ -407,9 +382,8 @@ const Watch = () => {
                 </div>
               )}
 
-              {/* Related Content */}
-              <div className="bg-gray-900 rounded-lg p-4">
-                <h3 className="font-semibold mb-4 flex items-center">
+              <div className="bg-[#0a0a0a] border border-[#1a1a1a] rounded p-4">
+                <h3 className="text-xs uppercase tracking-widest text-gray-500 mb-4 flex items-center">
                   <FaList className="mr-2" />
                   Benzer İçerikler
                 </h3>

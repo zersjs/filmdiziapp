@@ -5,7 +5,6 @@ export const useFavorites = () => {
   const [favorites, setFavorites] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // Favorileri yükle
   useEffect(() => {
     try {
       const savedFavorites = favoritesHelper.getAll();
@@ -17,7 +16,6 @@ export const useFavorites = () => {
     }
   }, []);
 
-  // Favori ekle
   const addFavorite = useCallback((item) => {
     try {
       const favoriteItem = {
@@ -39,7 +37,6 @@ export const useFavorites = () => {
     }
   }, []);
 
-  // Favori kaldır
   const removeFavorite = useCallback((id, mediaType) => {
     try {
       favoritesHelper.remove(id, mediaType);
@@ -51,12 +48,10 @@ export const useFavorites = () => {
     }
   }, []);
 
-  // Favori durumunu kontrol et
   const isFavorite = useCallback((id, mediaType) => {
     return favoritesHelper.isFavorite(id, mediaType);
   }, []);
 
-  // Favori toggle
   const toggleFavorite = useCallback((item) => {
     const mediaType = item.media_type || 'movie';
     if (isFavorite(item.id, mediaType)) {
@@ -66,7 +61,6 @@ export const useFavorites = () => {
     }
   }, [isFavorite, addFavorite, removeFavorite]);
 
-  // Favorileri temizle
   const clearFavorites = useCallback(() => {
     try {
       localStorage.removeItem('favorites');
@@ -78,7 +72,6 @@ export const useFavorites = () => {
     }
   }, []);
 
-  // Kategoriye göre favorileri filtrele
   const getFavoritesByType = useCallback((mediaType) => {
     return favorites.filter(item => item.media_type === mediaType);
   }, [favorites]);

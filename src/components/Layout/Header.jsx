@@ -18,7 +18,6 @@ const Header = () => {
   const favoritesCount = state.favorites.length;
   const watchLaterCount = state.watchLater.length;
 
-  // Ctrl+K shortcut for search
   useEffect(() => {
     const handleKeyDown = (e) => {
       if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
@@ -30,8 +29,6 @@ const Header = () => {
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, []);
-
-
 
   const handleSearch = (e) => {
     e.preventDefault();
@@ -45,6 +42,12 @@ const Header = () => {
     { path: '/', label: 'Ana Sayfa', icon: <FaHome /> },
     { path: '/movies', label: 'Filmler', icon: <FaFilm /> },
     { path: '/series', label: 'Diziler', icon: <FaTv /> },
+    { 
+      path: '/reels', 
+      label: 'Reels', 
+      icon: <span className="text-transparent bg-clip-text bg-gradient-to-r from-pink-500 via-red-500 to-yellow-500">🎬</span>,
+      isNew: true
+    },
     { 
       path: '/favorites', 
       label: 'Favorilerim', 
@@ -65,12 +68,10 @@ const Header = () => {
     }`}>
       <div className="container-custom">
         <nav className="flex items-center justify-between h-16">
-          {/* Logo */}
           <Link to="/" className="flex items-center space-x-2">
             <span className="text-2xl font-bold tracking-tight">SINE<span className="text-gray-500">FIX</span></span>
           </Link>
 
-          {/* Desktop Navigation */}
           <div className="hidden md:flex items-center space-x-8">
             {navLinks.map((link) => (
               <Link
@@ -90,12 +91,18 @@ const Header = () => {
                     </span>
                   )}
                 </span>
-                <span>{link.label}</span>
+                <span className="relative">
+                  {link.label}
+                  {link.isNew && (
+                    <span className="absolute -top-2 -right-6 px-1.5 py-0.5 text-[10px] font-bold bg-gradient-to-r from-pink-500 to-orange-400 text-white rounded-md animate-pulse">
+                      YENİ
+                    </span>
+                  )}
+                </span>
               </Link>
             ))}
           </div>
 
-          {/* Search Button - Opens Modal */}
           <button
             onClick={() => setIsSearchModalOpen(true)}
             className="hidden md:flex items-center space-x-2 px-4 py-2 bg-gray-900 border border-gray-800 rounded-full text-sm text-gray-400 hover:text-white hover:border-gray-600 transition-all duration-200 group"
@@ -106,10 +113,9 @@ const Header = () => {
             <kbd className="px-2 py-1 bg-gray-800 rounded text-xs">Ctrl K</kbd>
           </button>
 
-          {/* Mobile Menu Button - Animated Hamburger */}
           <button
             onClick={() => setIsOpen(!isOpen)}
-            className="md:hidden relative w-10 h-10 flex items-center justify-center text-white focus:outline-none"
+            className="md:hidden relative w-10 h-10 flex items-center justify-center text-white focus:outline-none hamburger-menu-btn"
             aria-label="Menu"
           >
             <div className="hamburger-menu">
@@ -120,11 +126,9 @@ const Header = () => {
           </button>
         </nav>
 
-        {/* Mobile Menu Overlay */}
         <div className={`md:hidden fixed inset-0 top-16 z-50 transition-all duration-300 ${
           isOpen ? 'opacity-100 visible' : 'opacity-0 invisible'
         }`}>
-          {/* Backdrop */}
           <div 
             className={`absolute inset-0 bg-black/50 backdrop-blur-sm transition-opacity duration-300 ${
               isOpen ? 'opacity-100' : 'opacity-0'
@@ -132,12 +136,10 @@ const Header = () => {
             onClick={() => setIsOpen(false)}
           ></div>
           
-          {/* Menu Content */}
           <div className={`relative bg-black/95 backdrop-blur-md border-t border-gray-800 shadow-2xl transform transition-all duration-300 ${
             isOpen ? 'translate-y-0' : '-translate-y-full'
           }`}>
             <div className="px-6 py-6 space-y-6">
-              {/* Mobile Search Button */}
               <button
                 onClick={() => {
                   setIsSearchModalOpen(true);
@@ -149,7 +151,6 @@ const Header = () => {
                 <span className="text-gray-300">Film, dizi ara...</span>
               </button>
 
-              {/* Mobile Nav Links */}
               <div className="space-y-2">
                 {navLinks.map((link, index) => (
                   <Link
@@ -182,7 +183,6 @@ const Header = () => {
                 ))}
               </div>
 
-              {/* Mobile Menu Footer */}
               <div className="pt-4 border-t border-gray-800">
                 <div className="text-center text-gray-500 text-sm">
                   <span className="font-bold text-white">SINE<span className="text-gray-500">FIX</span></span>
@@ -194,7 +194,6 @@ const Header = () => {
         </div>
       </div>
 
-      {/* Search Modal */}
       <SearchModal 
         isOpen={isSearchModalOpen} 
         onClose={() => setIsSearchModalOpen(false)} 

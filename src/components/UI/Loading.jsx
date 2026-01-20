@@ -1,7 +1,6 @@
 import React from 'react';
 import { FaSpinner } from 'react-icons/fa';
 
-// Ana loading bileşeni
 const Loading = ({ size = 'large', text = 'Yükleniyor...', className = '', fullScreen = false }) => {
   const sizeClasses = {
     small: 'h-4 w-4',
@@ -35,7 +34,6 @@ const Loading = ({ size = 'large', text = 'Yükleniyor...', className = '', full
   );
 };
 
-// Sayfa loading'i
 export const PageLoading = ({ text = 'Sayfa yükleniyor...' }) => {
   return (
     <div className="min-h-screen bg-black text-white flex items-center justify-center">
@@ -44,7 +42,6 @@ export const PageLoading = ({ text = 'Sayfa yükleniyor...' }) => {
   );
 };
 
-// İçerik loading'i
 export const ContentLoading = ({ text = 'İçerik yükleniyor...' }) => {
   return (
     <div className="flex items-center justify-center py-12">
@@ -53,7 +50,6 @@ export const ContentLoading = ({ text = 'İçerik yükleniyor...' }) => {
   );
 };
 
-// Buton loading'i
 export const ButtonLoading = ({ text = 'Yükleniyor...' }) => {
   return (
     <div className="flex items-center space-x-2">
@@ -63,7 +59,6 @@ export const ButtonLoading = ({ text = 'Yükleniyor...' }) => {
   );
 };
 
-// Skeleton loading bileşenleri
 export const SkeletonCard = () => {
   return (
     <div className="animate-pulse">
@@ -133,7 +128,6 @@ export const SkeletonDetail = () => {
   );
 };
 
-// Inline loading (küçük alanlar için)
 export const InlineLoading = ({ size = 'small' }) => {
   return <Loading size={size} className="py-4" />;
 };

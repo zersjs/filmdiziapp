@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 
-// Debounce hook - değer değişikliklerini geciktirir
 export const useDebounce = (value, delay) => {
   const [debouncedValue, setDebouncedValue] = useState(value);
 
@@ -17,7 +16,6 @@ export const useDebounce = (value, delay) => {
   return debouncedValue;
 };
 
-// Debounced callback hook - fonksiyon çağrılarını geciktirir
 export const useDebouncedCallback = (callback, delay, dependencies = []) => {
   const timeoutRef = useRef(null);
 
@@ -31,7 +29,6 @@ export const useDebouncedCallback = (callback, delay, dependencies = []) => {
     }, delay);
   }, [callback, delay, ...dependencies]);
 
-  // Cleanup
   useEffect(() => {
     return () => {
       if (timeoutRef.current) {
@@ -40,7 +37,6 @@ export const useDebouncedCallback = (callback, delay, dependencies = []) => {
     };
   }, []);
 
-  // Cancel fonksiyonu
   const cancel = useCallback(() => {
     if (timeoutRef.current) {
       clearTimeout(timeoutRef.current);
@@ -51,13 +47,11 @@ export const useDebouncedCallback = (callback, delay, dependencies = []) => {
   return [debouncedCallback, cancel];
 };
 
-// Arama için özel debounce hook
 export const useSearchDebounce = (initialQuery = '', delay = 500) => {
   const [query, setQuery] = useState(initialQuery);
   const [debouncedQuery, setDebouncedQuery] = useState(initialQuery);
   const [isSearching, setIsSearching] = useState(false);
 
-  // Query değiştiğinde debounce başlat
   useEffect(() => {
     if (query !== debouncedQuery) {
       setIsSearching(true);

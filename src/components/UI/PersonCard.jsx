@@ -38,7 +38,6 @@ const PersonCard = ({ person }) => {
           </div>
         )}
         
-        {/* Overlay */}
         <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300">
           <div className="absolute bottom-0 left-0 right-0 p-3 text-white">
             <h3 className="font-medium text-sm line-clamp-1 text-shadow">

@@ -12,7 +12,6 @@ const Search = () => {
   const { toast } = useToast();
   const [currentQuery, setCurrentQuery] = useState(new URLSearchParams(location.search).get('q') || '');
 
-  // API hook ile arama
   const { data: searchData, loading, execute: performSearch } = useApi(
     (query) => searchService.multi(query),
     [],

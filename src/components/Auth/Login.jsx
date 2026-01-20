@@ -50,7 +50,7 @@ const Login = () => {
 
   const handleSocialLogin = (provider) => {
     toast.info(`${provider} login coming soon!`);
-    // Implement social login logic
+    
   };
 
   return (
@@ -61,7 +61,6 @@ const Login = () => {
         transition={{ duration: 0.5 }}
         className="max-w-md w-full space-y-8"
       >
-        {/* Logo and Title */}
         <div className="text-center">
           <motion.h1
             initial={{ scale: 0.5 }}
@@ -85,7 +84,6 @@ const Login = () => {
           </p>
         </div>
 
-        {/* Login Form */}
         <motion.form
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
@@ -94,7 +92,6 @@ const Login = () => {
           onSubmit={handleSubmit}
         >
           <div className="space-y-4">
-            {/* Email */}
             <div>
               <label htmlFor="email" className="block text-sm font-medium text-gray-200 mb-2">
                 {t('auth.email')}
@@ -112,7 +109,6 @@ const Login = () => {
               />
             </div>
 
-            {/* Password */}
             <div className="relative">
               <label htmlFor="password" className="block text-sm font-medium text-gray-200 mb-2">
                 {t('auth.password')}
@@ -138,7 +134,6 @@ const Login = () => {
             </div>
           </div>
 
-          {/* Remember Me & Forgot Password */}
           <div className="flex items-center justify-between">
             <div className="flex items-center">
               <input
@@ -162,7 +157,6 @@ const Login = () => {
             </Link>
           </div>
 
-          {/* Submit Button */}
           <button
             type="submit"
             disabled={isLoading}
@@ -171,7 +165,6 @@ const Login = () => {
             {isLoading ? t('common.loading') : t('auth.login')}
           </button>
 
-          {/* Social Login */}
           <div className="mt-6">
             <div className="relative">
               <div className="absolute inset-0 flex items-center">

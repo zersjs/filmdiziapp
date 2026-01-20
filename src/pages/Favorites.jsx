@@ -69,7 +69,6 @@ const Favorites = () => {
         </div>
       </div>
 
-      {/* Clear Favorites Modal */}
       <ConfirmModal
         isOpen={showClearModal}
         onClose={() => setShowClearModal(false)}
@@ -85,4 +84,3 @@ const Favorites = () => {
 };
 
 export default Favorites;
-
