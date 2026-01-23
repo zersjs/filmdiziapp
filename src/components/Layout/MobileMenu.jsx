@@ -42,11 +42,24 @@ const MobileMenu = ({ isOpen, onClose }) => {
           {isAuthenticated ? (
             <>
               <div className="mobile-menu-divider" />
-              <NavLink to={`/profile/${user?.id}`} className="mobile-menu-item" onClick={onClose}>
-                <FaUser />
-                <span>{user?.user_metadata?.username || 'Profilim'}</span>
+              <NavLink to={`/profile/${user?.id}`} className="mobile-menu-item profile-nav-item" onClick={onClose}>
+                <div className="mobile-menu-avatar">
+                  {user?.user_metadata?.avatar_url || user?.user_metadata?.picture ? (
+                    <img 
+                      src={user?.user_metadata?.avatar_url || user?.user_metadata?.picture} 
+                      alt="Avatar" 
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <FaUser />
+                  )}
+                </div>
+                <div className="mobile-menu-user-info">
+                  <span className="user-name">{user?.user_metadata?.username || user?.user_metadata?.full_name || user?.email?.split('@')[0]}</span>
+                  <span className="user-view-profile">Profili Görüntüle</span>
+                </div>
               </NavLink>
-              <button onClick={handleSignOut} className="mobile-menu-item text-red-500">
+              <button onClick={handleSignOut} className="mobile-menu-item text-red-500 mt-2">
                 <FaSignOutAlt />
                 <span>Çıkış Yap</span>
               </button>

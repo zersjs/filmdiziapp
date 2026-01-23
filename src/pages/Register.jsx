@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
-import { FaEnvelope, FaLock, FaUser, FaEye, FaEyeSlash, FaGoogle, FaGithub, FaCheck, FaTimes } from 'react-icons/fa';
+import { FaEnvelope, FaLock, FaUser, FaEye, FaEyeSlash, FaGoogle, FaCheck, FaTimes, FaPlay } from 'react-icons/fa';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../services/supabase';
 
@@ -16,6 +16,7 @@ const Register = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
+  const [focusedField, setFocusedField] = useState(null);
 
   const passwordChecks = {
     length: password.length >= 6,
@@ -64,18 +65,29 @@ const Register = () => {
 
   if (success) {
     return (
-      <div className="auth-page">
-        <div className="auth-container">
-          <div className="auth-success">
-            <FaCheck className="auth-success-icon" />
-            <h2>Kayıt Başarılı!</h2>
-            <p>E-posta adresine bir doğrulama linki gönderdik. Lütfen e-postanı kontrol et.</p>
-            <Link to="/login" className="auth-submit">
-              Giriş Yap
-            </Link>
+      <>
+        <Helmet>
+          <title>Kayıt Başarılı | SineFix</title>
+        </Helmet>
+        <div className="auth-modern-page">
+          <div className="auth-bg-effect">
+            <div className="auth-bg-gradient" />
+            <div className="auth-bg-grid" />
+          </div>
+          <div className="auth-success-container">
+            <div className="auth-success-card">
+              <div className="auth-success-icon-wrap">
+                <FaCheck className="auth-success-icon" />
+              </div>
+              <h2>Kayıt Başarılı!</h2>
+              <p>E-posta adresine bir doğrulama linki gönderdik. Lütfen e-postanı kontrol et ve hesabını doğrula.</p>
+              <Link to="/login" className="auth-submit-btn">
+                Giriş Yap
+              </Link>
+            </div>
           </div>
         </div>
-      </div>
+      </>
     );
   }
 
@@ -85,115 +97,167 @@ const Register = () => {
         <title>Kayıt Ol | SineFix</title>
       </Helmet>
 
-      <div className="min-h-screen flex items-center justify-center pt-24 pb-12 px-4">
-        <div className="w-full max-w-md bg-[#0a0a0a] border border-[#1a1a1a] rounded-lg p-8">
-          <div className="text-center mb-8">
-            <h1 className="text-3xl font-bold mb-2">Hesap Oluştur</h1>
-            <p className="text-gray-500">Ücretsiz kayıt olun</p>
-          </div>
+      <div className="auth-modern-page">
+        {/* Background Effect */}
+        <div className="auth-bg-effect">
+          <div className="auth-bg-gradient" />
+          <div className="auth-bg-grid" />
+        </div>
 
-          {error && (
-            <div className="bg-red-950/20 border border-red-900/30 text-red-500 p-4 rounded mb-6 text-sm text-center">
-              {error}
-            </div>
-          )}
-
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="relative">
-              <FaUser className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-600" />
-              <input
-                type="text"
-                placeholder="Kullanıcı Adı"
-                className="w-full bg-black border border-[#222] text-white rounded px-12 py-3 focus:outline-none focus:border-gray-500"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                required
-              />
-            </div>
-
-            <div className="relative">
-              <FaEnvelope className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-600" />
-              <input
-                type="email"
-                placeholder="E-posta"
-                className="w-full bg-black border border-[#222] text-white rounded px-12 py-3 focus:outline-none focus:border-gray-500"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-              />
-            </div>
-
-            <div className="relative">
-              <FaLock className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-600" />
-              <input
-                type={showPassword ? 'text' : 'password'}
-                placeholder="Şifre"
-                className="w-full bg-black border border-[#222] text-white rounded px-12 py-3 focus:outline-none focus:border-gray-500"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-              />
-              <button
-                type="button"
-                className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-600 hover:text-white"
-                onClick={() => setShowPassword(!showPassword)}
-              >
-                {showPassword ? <FaEyeSlash /> : <FaEye />}
-              </button>
-            </div>
-
-            <div className="relative">
-              <FaLock className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-600" />
-              <input
-                type={showPassword ? 'text' : 'password'}
-                placeholder="Şifreyi Onayla"
-                className="w-full bg-black border border-[#222] text-white rounded px-12 py-3 focus:outline-none focus:border-gray-500"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                required
-              />
-            </div>
-
-            <div className="flex flex-col gap-2 pt-2">
-              <div className={`flex items-center gap-2 text-xs uppercase tracking-widest ${passwordChecks.length ? 'text-white' : 'text-gray-600'}`}>
-                {passwordChecks.length ? <FaCheck /> : <FaTimes />}
-                <span>Min 6 Karakter</span>
+        <div className="auth-modern-container">
+          {/* Left Side - Branding */}
+          <div className="auth-branding">
+            <div className="auth-branding-content">
+              <div className="auth-logo">
+                <FaPlay className="auth-logo-icon" />
+                <span className="auth-logo-text">SineFix</span>
               </div>
-              <div className={`flex items-center gap-2 text-xs uppercase tracking-widest ${passwordChecks.match ? 'text-white' : 'text-gray-600'}`}>
-                {passwordChecks.match ? <FaCheck /> : <FaTimes />}
-                <span>Şifreler Eşleşiyor</span>
+              <h2 className="auth-branding-title">Sinema Deneyimine Katıl</h2>
+              <p className="auth-branding-desc">
+                Ücretsiz hesap oluştur ve film dünyasının kapılarını aç. Kişiselleştirilmiş öneriler, izleme listeleri ve daha fazlası!
+              </p>
+              <div className="auth-features">
+                <div className="auth-feature">
+                  <span className="auth-feature-icon">✨</span>
+                  <span>Ücretsiz Üyelik</span>
+                </div>
+                <div className="auth-feature">
+                  <span className="auth-feature-icon">🎯</span>
+                  <span>Kişisel Öneriler</span>
+                </div>
+                <div className="auth-feature">
+                  <span className="auth-feature-icon">📝</span>
+                  <span>İzleme Listesi</span>
+                </div>
               </div>
             </div>
-
-            <button type="submit" className="btn-primary w-full py-3 mt-4" disabled={loading}>
-              {loading ? 'Yükleniyor...' : 'KAYIT OL'}
-            </button>
-          </form>
-
-          <div className="flex items-center gap-4 my-8">
-            <div className="flex-grow h-px bg-[#1a1a1a]" />
-            <span className="text-xs text-gray-600">VEYA</span>
-            <div className="flex-grow h-px bg-[#1a1a1a]" />
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <button 
-              className="btn-secondary py-3 flex items-center justify-center gap-2 text-xs"
-              onClick={() => handleSocialLogin('google')}
-            >
-              <FaGoogle /> GOOGLE
-            </button>
-            <button 
-              className="btn-secondary py-3 flex items-center justify-center gap-2 text-xs"
-              onClick={() => handleSocialLogin('github')}
-            >
-              <FaGithub /> GITHUB
-            </button>
-          </div>
+          {/* Right Side - Form */}
+          <div className="auth-form-side">
+            <div className="auth-form-container">
+              <div className="auth-form-header">
+                <h1>Hesap Oluştur</h1>
+                <p>Hemen ücretsiz kayıt ol</p>
+              </div>
 
-          <p className="text-center mt-10 text-sm text-gray-500">
-            Hesabınız var mı? <Link to="/login" className="text-white hover:underline">Giriş Yapın</Link>
-          </p>
+              {error && (
+                <div className="auth-error-modern">
+                  <span>{error}</span>
+                </div>
+              )}
+
+              <form onSubmit={handleSubmit} className="auth-form">
+                <div className={`auth-input-group ${focusedField === 'username' ? 'focused' : ''} ${username ? 'has-value' : ''}`}>
+                  <FaUser className="auth-input-icon" />
+                  <input
+                    type="text"
+                    id="username"
+                    value={username}
+                    onChange={(e) => setUsername(e.target.value)}
+                    onFocus={() => setFocusedField('username')}
+                    onBlur={() => setFocusedField(null)}
+                    required
+                  />
+                  <label htmlFor="username">Kullanıcı Adı</label>
+                  <div className="auth-input-line" />
+                </div>
+
+                <div className={`auth-input-group ${focusedField === 'email' ? 'focused' : ''} ${email ? 'has-value' : ''}`}>
+                  <FaEnvelope className="auth-input-icon" />
+                  <input
+                    type="email"
+                    id="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    onFocus={() => setFocusedField('email')}
+                    onBlur={() => setFocusedField(null)}
+                    required
+                  />
+                  <label htmlFor="email">E-posta Adresi</label>
+                  <div className="auth-input-line" />
+                </div>
+
+                <div className={`auth-input-group ${focusedField === 'password' ? 'focused' : ''} ${password ? 'has-value' : ''}`}>
+                  <FaLock className="auth-input-icon" />
+                  <input
+                    type={showPassword ? 'text' : 'password'}
+                    id="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    onFocus={() => setFocusedField('password')}
+                    onBlur={() => setFocusedField(null)}
+                    required
+                  />
+                  <label htmlFor="password">Şifre</label>
+                  <button
+                    type="button"
+                    className="auth-password-toggle"
+                    onClick={() => setShowPassword(!showPassword)}
+                  >
+                    {showPassword ? <FaEyeSlash /> : <FaEye />}
+                  </button>
+                  <div className="auth-input-line" />
+                </div>
+
+                <div className={`auth-input-group ${focusedField === 'confirmPassword' ? 'focused' : ''} ${confirmPassword ? 'has-value' : ''}`}>
+                  <FaLock className="auth-input-icon" />
+                  <input
+                    type={showPassword ? 'text' : 'password'}
+                    id="confirmPassword"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    onFocus={() => setFocusedField('confirmPassword')}
+                    onBlur={() => setFocusedField(null)}
+                    required
+                  />
+                  <label htmlFor="confirmPassword">Şifre Tekrar</label>
+                  <div className="auth-input-line" />
+                </div>
+
+                {/* Password Checks */}
+                <div className="auth-password-checks">
+                  <div className={`auth-check ${passwordChecks.length ? 'valid' : ''}`}>
+                    {passwordChecks.length ? <FaCheck /> : <FaTimes />}
+                    <span>En az 6 karakter</span>
+                  </div>
+                  <div className={`auth-check ${passwordChecks.match ? 'valid' : ''}`}>
+                    {passwordChecks.match ? <FaCheck /> : <FaTimes />}
+                    <span>Şifreler eşleşiyor</span>
+                  </div>
+                </div>
+
+                <button type="submit" className="auth-submit-btn" disabled={loading}>
+                  {loading ? (
+                    <span className="auth-loading">
+                      <span className="auth-loading-spinner" />
+                      Kayıt Yapılıyor...
+                    </span>
+                  ) : (
+                    'Kayıt Ol'
+                  )}
+                </button>
+              </form>
+
+              <div className="auth-divider">
+                <span>veya</span>
+              </div>
+
+              <div className="auth-social-buttons">
+                <button 
+                  className="auth-social-btn google full-width"
+                  onClick={() => handleSocialLogin('google')}
+                >
+                  <FaGoogle />
+                  <span>Google ile Kayıt Ol</span>
+                </button>
+              </div>
+
+              <p className="auth-switch">
+                Hesabınız var mı? <Link to="/login">Giriş Yapın</Link>
+              </p>
+            </div>
+          </div>
         </div>
       </div>
     </>

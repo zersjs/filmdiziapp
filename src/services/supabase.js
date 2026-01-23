@@ -203,4 +203,64 @@ export const watchHistoryService = {
   }
 };
 
+// Shorts yorumları servisi
+export const commentsService = {
+  getComments: async (mediaId, mediaType, limit = 50) => {
+    if (!supabase) return { data: [], count: 0 };
+    
+    const { data, error, count } = await supabase
+      .from('comments')
+      .select('*', { count: 'exact' })
+      .eq('media_id', mediaId)
+      .eq('media_type', mediaType)
+      .order('created_at', { ascending: false })
+      .limit(limit);
+    
+    return { data: data || [], count: count || 0, error };
+  },
+
+  addComment: async (userId, mediaId, mediaType, content, userInfo) => {
+    if (!supabase || !userId) return { error: { message: 'Not authenticated' } };
+    
+    const { data, error } = await supabase
+      .from('comments')
+      .insert({
+        user_id: userId,
+        media_id: mediaId,
+        media_type: mediaType,
+        content,
+        user_name: userInfo?.name || 'Anonim',
+        user_avatar: userInfo?.avatar || null
+      })
+      .select()
+      .single();
+    
+    return { data, error };
+  },
+
+  deleteComment: async (userId, commentId) => {
+    if (!supabase || !userId) return { error: { message: 'Not authenticated' } };
+    
+    const { error } = await supabase
+      .from('comments')
+      .delete()
+      .eq('id', commentId)
+      .eq('user_id', userId);
+    
+    return { error };
+  },
+
+  getCommentCount: async (mediaId, mediaType) => {
+    if (!supabase) return 0;
+    
+    const { count } = await supabase
+      .from('comments')
+      .select('*', { count: 'exact', head: true })
+      .eq('media_id', mediaId)
+      .eq('media_type', mediaType);
+    
+    return count || 0;
+  }
+};
+
 export default supabase;

@@ -1,9 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Helmet } from 'react-helmet-async';
-import { Link } from 'react-router-dom';
-import { FaFilm, FaTv, FaTimes, FaPlay, FaSearch } from 'react-icons/fa';
+import { Link, useNavigate } from 'react-router-dom';
+import { FaFilm, FaTv, FaTimes, FaPlay, FaSearch, FaVolumeUp, FaVolumeMute, FaFire } from 'react-icons/fa';
 import { movieService, tvService, trendingService, getImageUrl } from '../services/tmdb';
+import { shortsService } from '../services/shorts';
 import { formatRating, getYear, truncateText, createSlug } from '../utils/helpers';
+import { triggerHaptic, HapticType } from '../utils/haptic';
 import { useApi } from '../hooks';
 import { useApp } from '../contexts';
 import { useToast } from '../components/UI/Toast';
@@ -12,12 +14,13 @@ import SearchModal from '../components/UI/SearchModal';
 import { HeroSkeleton } from '../components/UI/EnhancedSkeleton';
 
 
-
 const Home = () => {
   const { state, actions } = useApp();
   const { toast } = useToast();
   const [featuredContent, setFeaturedContent] = useState(null);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [shortsData, setShortsData] = useState([]);
+  const [shortsLoading, setShortsLoading] = useState(true);
 
   const { data: trendingData, loading: trendingLoading, error: trendingError } = useApi(
     () => trendingService.getAll('day'),
@@ -59,6 +62,25 @@ const Home = () => {
     }
   );
 
+  // Shorts içerikleri yükle
+  useEffect(() => {
+    const loadShorts = async () => {
+      try {
+        setShortsLoading(true);
+        const randomPage = Math.floor(Math.random() * 5) + 1;
+        const data = await shortsService.getContentWithTrailers(randomPage);
+        // Rastgele 6 içerik seç
+        const shuffled = data.sort(() => Math.random() - 0.5);
+        setShortsData(shuffled.slice(0, 6));
+      } catch (e) {
+        console.error('Shorts yüklenemedi:', e);
+      } finally {
+        setShortsLoading(false);
+      }
+    };
+    loadShorts();
+  }, []);
+
   useEffect(() => {
     if (!trendingData?.results || !popularMoviesData?.results || !topRatedData?.results) {
       return;
@@ -68,7 +90,7 @@ const Home = () => {
       const contentPool = [
         ...trendingData.results.filter(item => item.vote_average >= 6.5),
         ...popularMoviesData.results.map(item => ({ ...item, media_type: 'movie' })),
-        ...popularSeriesData.results.map(item => ({ ...item, media_type: 'tv' }))
+        ...(popularSeriesData?.results || []).map(item => ({ ...item, media_type: 'tv' }))
       ];
 
       const uniqueContent = Array.from(new Map(
@@ -80,7 +102,7 @@ const Home = () => {
     };
 
     setFeaturedContent(selectFeaturedContent());
-  }, [trendingData, popularMoviesData, popularSeriesData]);
+  }, [trendingData, popularMoviesData, popularSeriesData, topRatedData]);
 
   const loading = trendingLoading || moviesLoading || seriesLoading || topRatedLoading || upcomingLoading;
 
@@ -89,6 +111,7 @@ const Home = () => {
   const popularSeries = popularSeriesData?.results || [];
   const topRatedMovies = topRatedData?.results || [];
   const upcomingMovies = upcomingData?.results || [];
+
 
   if (loading) return <HeroSkeleton />;
 
@@ -194,6 +217,11 @@ const Home = () => {
           items={trending}
           viewAllLink="/trending"
         />
+
+        {/* Shorts / Sahneler Section */}
+        {shortsData.length > 0 && (
+          <ShortsSection items={shortsData} loading={shortsLoading} />
+        )}
 
         <ContentSection
           title="Popüler Filmler"
@@ -338,4 +366,123 @@ const ContentSection = ({ title, items, viewAllLink, mediaType }) => {
   );
 };
 
+// Shorts Section - TikTok/Reels style preview cards
+const ShortsSection = ({ items, loading }) => {
+  const navigate = useNavigate();
+
+  const handleCardClick = (item) => {
+    triggerHaptic(HapticType.MEDIUM);
+    const title = (item.title || item.name || '')
+      .toLowerCase()
+      .replace(/[^a-z0-9\s-ğüşıöçĞÜŞİÖÇ]/gi, '')
+      .replace(/\s+/g, '-')
+      .substring(0, 50);
+    navigate(`/sahneler/${item.id}-${item.media_type}-${title}`);
+  };
+
+  if (loading) {
+    return (
+      <section>
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-2xl font-bold flex items-center gap-3">
+            <FaFire className="text-orange-500" />
+            <span>Sahneler</span>
+          </h2>
+        </div>
+        <div className="shorts-grid">
+          {[...Array(6)].map((_, i) => (
+            <div key={i} className="shorts-card-skeleton">
+              <div className="shorts-skeleton-shimmer" />
+            </div>
+          ))}
+        </div>
+      </section>
+    );
+  }
+
+  return (
+    <section>
+      <div className="flex items-center justify-between mb-6">
+        <h2 className="text-2xl font-bold flex items-center gap-3">
+          <FaFire className="text-orange-500 animate-pulse" />
+          <span>Sahneler</span>
+          <span className="text-xs bg-gradient-to-r from-orange-500 to-red-500 text-white px-2 py-1 rounded-full font-medium">
+            YENİ
+          </span>
+        </h2>
+        <Link
+          to="/sahneler"
+          className="text-gray-400 hover:text-white transition-colors flex items-center gap-2"
+          onClick={() => triggerHaptic(HapticType.LIGHT)}
+        >
+          Tümünü Gör →
+        </Link>
+      </div>
+      
+      <div className="shorts-grid">
+        {items.map((item, index) => (
+          <ShortsPreviewCard 
+            key={`${item.id}-${item.media_type}`} 
+            item={item} 
+            index={index}
+            onClick={() => handleCardClick(item)}
+          />
+        ))}
+      </div>
+    </section>
+  );
+};
+
+// Shorts Preview Card - TikTok/Reels style with poster
+const ShortsPreviewCard = ({ item, index, onClick }) => {
+  const title = item.title || item.name;
+  const year = (item.release_date || item.first_air_date || '').split('-')[0];
+  const rating = item.vote_average?.toFixed(1);
+  // Poster kullan - daha kaliteli ve tutarlı görsel
+  const posterUrl = getImageUrl(item.poster_path, 'w500');
+
+  return (
+    <div 
+      className="shorts-preview-card haptic-target"
+      onClick={onClick}
+      style={{ animationDelay: `${index * 0.1}s` }}
+    >
+      <div className="shorts-preview-thumbnail">
+        <img 
+          src={posterUrl} 
+          alt={title}
+          loading="lazy"
+        />
+        <div className="shorts-preview-overlay" />
+        
+        {/* Play icon */}
+        <div className="shorts-preview-play">
+          <FaPlay />
+        </div>
+        
+        {/* Media type badge */}
+        <div className="shorts-preview-badge">
+          {item.media_type === 'movie' ? <FaFilm /> : <FaTv />}
+        </div>
+        
+        {/* Rating badge */}
+        <div className="shorts-preview-rating-badge">
+          ★ {rating}
+        </div>
+      </div>
+      
+      <div className="shorts-preview-info">
+        <h4 className="shorts-preview-title">{title}</h4>
+        <div className="shorts-preview-meta">
+          <span className="shorts-preview-year">{year}</span>
+          <span className="shorts-preview-type">
+            {item.media_type === 'movie' ? 'Film' : 'Dizi'}
+          </span>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 export default Home;
+

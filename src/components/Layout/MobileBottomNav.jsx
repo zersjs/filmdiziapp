@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { NavLink } from 'react-router-dom';
-import { FaHome, FaFilm, FaTv, FaPlay, FaBars } from 'react-icons/fa';
+import { FaHome, FaFilm, FaTv, FaBars, FaPlay } from 'react-icons/fa';
 import MobileMenu from './MobileMenu';
 
 const MobileBottomNav = () => {
@@ -10,7 +10,7 @@ const MobileBottomNav = () => {
     { path: '/', icon: FaHome, label: 'Ana Sayfa' },
     { path: '/movies', icon: FaFilm, label: 'Filmler' },
     { path: '/series', icon: FaTv, label: 'Diziler' },
-    { path: '/sahneler', icon: FaPlay, label: 'Sahneler' },
+    { path: '/sahneler', icon: FaPlay, label: 'Sahneler', special: true },
   ];
 
   return (
@@ -20,9 +20,13 @@ const MobileBottomNav = () => {
           <NavLink
             key={item.path}
             to={item.path}
-            className={({ isActive }) => `mobile-nav-item ${isActive ? 'active' : ''}`}
+            className={({ isActive }) => 
+              `mobile-nav-item ${isActive ? 'active' : ''} ${item.special ? 'special-shorts' : ''}`
+            }
           >
-            <item.icon />
+            <div className={item.special ? 'shorts-icon-wrapper' : ''}>
+              <item.icon />
+            </div>
             <span className="mobile-nav-label">{item.label}</span>
           </NavLink>
         ))}

@@ -133,20 +133,20 @@ const MovieDetail = () => {
         <meta name="description" content={movie.overview} />
       </Helmet>
 
-      <section className="relative min-h-[60vh] md:min-h-[70vh] flex items-end">
+      <section className="relative min-h-[50vh] flex items-end">
         <div className="absolute inset-0">
           <img
             src={getImageUrl(movie.backdrop_path, 'original')}
             alt={movie.title}
-            className="w-full h-full object-cover opacity-30 md:opacity-40"
+            className="w-full h-full object-cover opacity-50"
           />
-          <div className="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-transparent" />
+          <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent" />
         </div>
 
-        <div className="relative z-10 w-full pb-8 pt-20 md:pt-32">
-          <div className="container-custom">
-            <div className="flex flex-col md:flex-row gap-6 md:gap-8 items-center md:items-start text-center md:text-left">
-              <div className="flex-shrink-0 w-40 md:w-64">
+        <div className="relative z-10 w-full pb-10 pt-32 md:pb-8 md:pt-32">
+          <div className="container-custom px-4">
+            <div className="flex flex-col md:flex-row gap-8 items-center md:items-start text-center md:text-left">
+              <div className="flex-shrink-0 w-44 md:w-64">
                 <img
                   src={getImageUrl(movie.poster_path, 'w342')}
                   alt={movie.title}
@@ -199,21 +199,21 @@ const MovieDetail = () => {
                   ))}
                 </div>
 
-                <div className="flex flex-wrap items-center justify-center md:justify-start gap-3">
+                <div className="flex flex-wrap items-center justify-center md:justify-start gap-3 w-full sm:w-auto">
                   <Link
                     to={`/watch/movie/${movie.id}`}
-                    className="btn-primary flex items-center space-x-2 px-8"
+                    className="btn-primary flex-1 sm:flex-none flex items-center justify-center space-x-2 px-8 py-3.5"
                   >
-                    <FaPlay className="text-xs" />
-                    <span className="text-sm font-bold tracking-widest">HEMEN İZLE</span>
+                    <FaPlay className="text-[10px]" />
+                    <span className="text-xs font-black tracking-[0.2em]">HEMEN İZLE</span>
                   </Link>
                   
                   <button
                     onClick={toggleFavorite}
-                    className={`p-3 rounded-xl transition-colors ${
+                    className={`p-3.5 rounded-xl transition-colors ${
                       isFavorite 
                         ? 'bg-white text-black' 
-                        : 'bg-white/5 border border-white/5 text-white hover:bg-white/10'
+                        : 'bg-white/5 border border-white/5 text-white'
                     }`}
                   >
                     <FaHeart />
@@ -221,7 +221,7 @@ const MovieDetail = () => {
                   
                   <button
                     onClick={handleShare}
-                    className="p-3 bg-white/5 border border-white/5 rounded-xl hover:bg-white/10 transition-colors"
+                    className="p-3.5 bg-white/5 border border-white/5 rounded-xl text-white"
                   >
                     <FaShare />
                   </button>
@@ -232,8 +232,8 @@ const MovieDetail = () => {
         </div>
       </section>
 
-      <section className="border-b border-white/5 sticky top-16 bg-black/80 backdrop-blur-md z-20">
-        <div className="container-custom">
+      <section className="border-b border-white/5 sticky top-0 md:top-16 bg-black/90 backdrop-blur-xl z-50">
+        <div className="container-custom px-0 md:px-8">
           <div className="flex overflow-x-auto scrollbar-hide">
             {[
               { id: 'overview', label: 'GENEL BAKIŞ' },
@@ -246,20 +246,23 @@ const MovieDetail = () => {
               <button
                 key={tab.id}
                 onClick={() => handleTabChange(tab.id)}
-                className={`px-6 py-4 whitespace-nowrap transition-all text-[10px] font-bold tracking-[0.2em] ${
+                className={`flex-1 md:flex-none px-5 md:px-8 py-4 whitespace-nowrap transition-all text-[9px] md:text-[10px] font-black tracking-[0.2em] relative ${
                   activeTab === tab.id
-                    ? 'text-white border-b-2 border-white'
+                    ? 'text-white'
                     : 'text-gray-500 hover:text-white'
                 }`}
               >
                 {tab.label}
+                {activeTab === tab.id && (
+                  <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-white" />
+                )}
               </button>
             ))}
           </div>
         </div>
       </section>
 
-      <section className="container-custom py-8">
+      <section className="container-custom px-4 py-10 md:py-12">
         {activeTab === 'overview' && (
           <div className="max-w-4xl">
             <h2 className="text-2xl font-bold mb-4">Özet</h2>
@@ -304,8 +307,8 @@ const MovieDetail = () => {
 
         {activeTab === 'cast' && (
           <div>
-            <h2 className="text-2xl font-bold mb-6">Oyuncu Kadrosu</h2>
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
+            <h2 className="text-[11px] font-black tracking-[0.3em] uppercase text-gray-500 mb-8 md:mb-10">OYUNCU KADROSU</h2>
+            <div className="grid grid-cols-2 xs:grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-x-4 gap-y-8">
               {movie.credits?.cast?.slice(0, 12).map(person => (
                 <PersonCard key={person.id} person={person} />
               ))}
