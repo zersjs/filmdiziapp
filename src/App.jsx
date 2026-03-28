@@ -29,8 +29,6 @@ import Polls from './pages/Polls';
 import Shorts from './pages/Shorts';
 import Login from './pages/Login';
 import Register from './pages/Register';
-import SEORouter from './components/SEORouter';
-
 const ScrollToTop = () => {
   const { pathname } = useLocation();
   

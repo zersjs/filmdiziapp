@@ -340,15 +340,14 @@ const ContinueWatchingCard = ({ item }) => {
 
 const ContentSection = ({ title, items, viewAllLink, mediaType }) => {
   return (
-    <section>
-      <div className="flex items-center justify-between mb-6">
-        <h2 className="text-2xl font-bold">{title}</h2>
+    <section className="sf-section">
+      <div className="sf-section-header">
+        <h2 className="sf-section-title">
+          <span>{title}</span>
+        </h2>
         {viewAllLink && (
-          <Link
-            to={viewAllLink}
-            className="text-gray-400 hover:text-white transition-colors"
-          >
-            Tümünü Gör →
+          <Link to={viewAllLink} className="sf-section-link">
+            Tümünü Gör <span className="sf-section-arrow">&rarr;</span>
           </Link>
         )}
       </div>
