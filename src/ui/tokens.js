@@ -51,7 +51,7 @@ export const radius = {
 };
 
 export const typography = {
-  fontFamily: "'Inter', system-ui, -apple-system, sans-serif",
+  fontFamily: "'Plus Jakarta Sans', system-ui, -apple-system, sans-serif",
   size: {
     xs: '11px',
     sm: '13px',
