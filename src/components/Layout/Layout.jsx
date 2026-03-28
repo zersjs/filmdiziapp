@@ -4,6 +4,7 @@ import { FaHome, FaFilm, FaTv, FaPlay, FaSearch, FaHeart, FaClock, FaUser, FaSig
 import Logo from '../UI/Logo';
 import { useAuth } from '../../contexts/AuthContext';
 import MobileBottomNav from './MobileBottomNav';
+import Footer from './Footer';
 
 const Sidebar = () => {
   const { user, signOut, isAuthenticated } = useAuth();
@@ -82,7 +83,10 @@ const Layout = ({ children }) => {
     <div className="app-layout">
       <Sidebar />
       <main className="main-content">
-        {children}
+        <div className="main-content-inner">
+          {children}
+        </div>
+        <Footer />
       </main>
       <MobileBottomNav />
     </div>

@@ -1,6 +1,7 @@
 import React from 'react';
 import { createRoot } from 'react-dom/client';
 import App from './App';
+import './ui/ui-kit.css';
 import './index.css';
 
 if (import.meta.env.PROD) {
