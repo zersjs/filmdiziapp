@@ -115,22 +115,22 @@ const Series = () => {
         <title>Diziler - SINEFIX</title>
       </Helmet>
 
-      <div className="min-h-screen pt-20">
+      <div className="min-h-screen py-8">
         <div className="container-custom">
-          <div className="flex items-center justify-between mb-8">
-            <h1 className="text-3xl font-bold">Diziler</h1>
+          <div className="flex items-center justify-between mb-6">
+            <h1 className="text-2xl font-bold tracking-tight">Diziler</h1>
             <button
               onClick={() => setShowFilters(!showFilters)}
-              className="flex items-center space-x-2 px-4 py-2 bg-gray-800 rounded-lg hover:bg-gray-700 transition-colors md:hidden"
+              className="flex items-center gap-2 px-3 py-2 text-xs font-semibold text-white/50 bg-white/[0.03] border border-white/[0.06] rounded-lg hover:bg-white/[0.06] transition md:hidden"
             >
               <FaFilter />
-              <span>Filtreler</span>
+              <span>Filtre</span>
             </button>
           </div>
 
-          <div className="flex gap-8">
-            <aside className={`w-full md:w-64 flex-shrink-0 ${showFilters ? 'block' : 'hidden md:block'}`}>
-              <div className="bg-[#0a0a0a] border border-[#1a1a1a] rounded-lg p-6 space-y-6">
+          <div className="flex gap-6">
+            <aside className={`w-full md:w-56 flex-shrink-0 ${showFilters ? 'block' : 'hidden md:block'}`}>
+              <div className="bg-[#0a0a0a] border border-[#141414] rounded-xl p-5 space-y-5 sticky top-4">
                 <div>
                   <h3 className="font-semibold mb-3 flex items-center text-sm uppercase tracking-wider text-gray-400">
                     <FaSortAmountDown className="mr-2" />
@@ -206,9 +206,9 @@ const Series = () => {
                 {(genre || year || rating || sort !== 'popular') && (
                   <button
                     onClick={clearFilters}
-                    className="w-full py-2 text-xs uppercase tracking-widest text-gray-500 hover:text-white transition-colors border border-[#222] rounded"
+                    className="w-full py-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-white/30 hover:text-white transition border border-[#1a1a1a] rounded-lg hover:border-white/10"
                   >
-                    Filtreleri Temizle
+                    Temizle
                   </button>
                 )}
               </div>
