@@ -55,7 +55,7 @@
 }
 
 .sidebar:hover { width: 220px; }
-.sidebar:hover .sidebar-item { justify-content: flex-start; padding-left: 20px; }
+.sidebar:hover .sidebar-item { justify-content: flex-start; padding-left: 20px; gap: 14px; }
 
 .sidebar-logo {
   display: flex;
@@ -85,7 +85,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 14px;
+  gap: 0;
   height: 44px;
   padding: 0;
   border-radius: 12px;
@@ -127,12 +127,18 @@
 .sidebar-label {
   font-size: 13px;
   font-weight: 500;
+  max-width: 0;
   opacity: 0;
-  visibility: hidden;
-  transition: opacity 0.2s ease 0.05s, visibility 0.2s;
+  overflow: hidden;
+  white-space: nowrap;
+  transition: max-width 0.28s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.2s ease;
   letter-spacing: -0.01em;
 }
-.sidebar:hover .sidebar-label { opacity: 1; visibility: visible; }
+.sidebar:hover .sidebar-label {
+  max-width: 160px;
+  opacity: 1;
+  transition: max-width 0.28s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.2s ease 0.05s;
+}
 
 .sidebar-auth {
   margin-top: auto;
