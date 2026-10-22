@@ -1,13 +1,10 @@
 import React from 'react';
-import { Helmet } from 'react-helmet-async';
+import { StaticSeo } from '../components/Seo';
 
 const PrivacyPolicy = () => {
   return (
     <div className="page container-custom max-w-3xl">
-      <Helmet>
-        <title>Gizlilik Politikası - SINEFIX</title>
-        <meta name="description" content="SINEFIX gizlilik politikası. Kişisel verilerinizin nasıl işlendiği hakkında bilgi edinin." />
-      </Helmet>
+      <StaticSeo path="/gizlilik-politikasi" />
 
       <div>
         <div>

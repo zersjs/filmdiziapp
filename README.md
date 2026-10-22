@@ -5,17 +5,51 @@ tarayıcıda saklanır, istenirse tek bir Vercel fonksiyonu üzerinden cihazlar 
 
 ## Özellikler
 
-- **Ana sayfa:** dönen öne çıkanlar, trendler (bugün / bu hafta), popüler ve en yüksek puanlı film/dizi satırları
-- **Filmler / Diziler:** sıralama, tür, yıl ve puan filtreleri; filtreler ve sayfa numarası URL'de tutulur
-- **Detay sayfası:** özet, bilgiler, oyuncular, sezon/bölüm listesi, videolar ve görseller, TMDB incelemeleri, fragman
+- **Ana sayfa:** dönen öne çıkanlar, trendler (bugün / bu hafta), popüler ve en yüksek puanlı film/dizi satırları,
+  kitaplıktaki dizilerin **yeni ve yaklaşan bölümleri** ("Takip ettiklerinde yeni bölümler")
+- **Filmler / Diziler:** kalıcı tür adresleri (`/movies/genre/korku`), sıralama, yıl, puan ve **platform** filtresi
+  (Netflix, Prime Video, Disney+… Türkiye kataloğu); filtreler ve sayfa numarası URL'de tutulur
+- **Detay sayfası:** özet, **Türkiye'de nerede izlenir** (abonelik / kiralık / satın alma), filmlerde
+  "şimdi başlarsan 23.41'de biter", dizilerde bir sonraki bölümün tarihi, serinin diğer filmleri, oyuncular,
+  sezon/bölüm listesi, videolar ve görseller, TMDB incelemeleri, fragman
+- **Ne izlesem?** (`/ne-izlesem`): ruh hali, süre, dönem ve sahip olunan platformlara göre öneri; kitaplıktakileri
+  atlar, "Başka öner" ile sıradaki yapıma geçer, seçimler paylaşılabilir adreste tutulur
+- **Yakında çıkacaklar:** kartlarda vizyon/yayın tarihine geri sayım
 - **İzleme sayfası:** kaynak seçimi (tercih hatırlanır), önceki/sonraki bölüm, sezon değiştirme
 - **Kitaplık:** favoriler, izleme listesi, kaldığın bölümden "izlemeye devam et"
-- **Arama:** Ctrl+K / `/` ile hızlı arama, film/dizi/kişi filtresiyle tam arama sayfası
+- **Arama:** Ctrl+K / `/` ile hızlı arama, son aramalar (yalnızca bu cihazda), film/dizi/kişi filtresiyle tam arama sayfası
+- **Klavye:** `?` kısayol listesi; `g` ardından `h f d s n l` ile sayfalar arası geçiş; detayda `t` fragman, `l` liste, `f` favori
 - **Sahneler:** dikey kaydırmalı fragman akışı (ayrıntılar aşağıda)
 - **Kitaplık ve senkronizasyon:** hesapsız; isteğe bağlı senkron koduyla cihazlar arası eşitleme, JSON yedek/geri yükleme
 
 Arayüz telefon, tablet ve masaüstü için ayrı ayrı düzenlenmiştir: masaüstünde sol menü, daha küçük ekranlarda
 üst bar + alt menü kullanılır; dokunmatik cihazlarda kart aksiyonları her zaman görünür.
+
+Animasyonlar (sayfa geçişi, kartların sırayla belirmesi, ekrana giren satırlar, hero'da yavaş yakınlaşma, kayan
+sekme çizgisi, favori/liste "pop" geri bildirimi, öneri kartlarının karıştırılması) işletim sisteminin
+**hareketi azalt** tercihinde kapanır.
+
+## Arama motoru optimizasyonu (SEO)
+
+Uygulama tek sayfalıktır; arama motorları ve sosyal ağ önizlemeleri için ilk HTML sunucuda hazırlanır:
+
+- **`api/render.js`** (`server/render.js`): statik dosya olmayan her adres bu fonksiyondan geçer. Derlenmiş
+  `dist/index.html` şablonuna sayfaya özel `<title>`, description, canonical, Open Graph/Twitter etiketleri ve
+  JSON-LD (Movie, TVSeries, Person, BreadcrumbList, ItemList) yazar; JavaScript çalıştırmayan istemciler için
+  başlık, özet, oyuncu ve benzer yapım bağlantılarını içeren düz HTML ekler. JavaScript açık kullanıcılar bu
+  içeriği görmez (`.js .ssr-shell { display: none }`), React ilk çizimde yerine geçer.
+- **Doğru HTTP durumları:** eksik/eski slug → 301 kalıcı adrese (`/movie/550` → `/movie/550/dovus-kulubu-izle`),
+  eski `?genre=` ve `/genre/:tür/:id` adresleri → 301 tür sayfasına, olmayan içerik → 404, kişisel sayfalar
+  (izleme, arama, kitaplık) → `noindex`.
+- **Tek kaynak:** etiketler ve JSON-LD `src/lib/seo.js`'te üretilir; sunucu ve tarayıcıdaki `<Seo>` bileşeni aynı
+  fonksiyonları kullanır. Sunucunun bastığı etiketler `data-rh` ile işaretlidir, React Helmet bunları kopyalamadan devralır.
+- **TMDB puanı yapılandırılmış veriye `aggregateRating` olarak yazılmaz** (Google, başka sitelerden toplanan
+  puanların işaretlenmesine izin vermez).
+- **Site haritası:** `/sitemap.xml` (dizin) → `/sitemaps/{pages,movies,series,people}.xml`; popüler, en iyi ve
+  trend listelerinden derlenir, afişler görsel site haritası olarak eklenir. `/robots.txt` site haritasını bildirir.
+- **Önbellek:** sayfalar CDN'de 1 saat (`s-maxage`), TMDB'ye ulaşılamazsa varsayılan etiketlerle 1 dakika önbelleğe alınır.
+- Ana sayfa statik `index.html` olarak sunulur; etiketleri derleme sırasında yazılır (`vite.config.js`).
+  `npm run build && npm run preview` sunucu tarafını yerelde birebir taklit eder.
 
 ## Teknolojiler
 
@@ -67,6 +101,7 @@ npm run dev            # http://localhost:3000
 | Değişken | Açıklama |
 | --- | --- |
 | `VITE_TMDB_API_KEY` / `VITE_TMDB_ACCESS_TOKEN` | TMDB anahtarları (tanımlanmazsa koddaki varsayılanlar kullanılır) |
+| `VITE_SITE_URL` | Canonical / Open Graph / site haritası için kalıcı adres (Vercel'de boşsa üretim alan adı) |
 | `KV_REST_API_URL` / `KV_REST_API_TOKEN` | İsteğe bağlı, yalnızca sunucuda: Upstash Redis (senkronizasyon) |
 
 ## Komutlar
@@ -75,22 +110,23 @@ npm run dev            # http://localhost:3000
 | --- | --- |
 | `npm run dev` | Geliştirme sunucusu |
 | `npm run build` | Üretim derlemesi (`dist/`) |
-| `npm run preview` | Derlemeyi yerelde sunar |
+| `npm run preview` | Derlemeyi yerelde sunar (sunucu tarafı SEO, site haritası ve robots.txt dahil) |
 | `npm test` | Testleri bir kez çalıştırır |
 | `npm run test:watch` | Testleri izleme modunda çalıştırır |
 
 ## Proje yapısı
 
 ```
-api/            Vercel Functions (library.js: senkronizasyon uç noktası)
-server/         Sunucu tarafı handler ve depo (Upstash REST / bellek içi)
+api/            Vercel Functions: library (senkronizasyon), render (sayfa HTML'i), sitemap, robots
+server/         Sunucu tarafı: kitaplık handler'ı ve deposu, render, sitemap, TMDB istemcisi
 src/
   components/   Layout, UI (kart, satır, modal, toast…), Detail, Library, Shorts
   contexts/     AppContext (kitaplık + senkronizasyon durumu)
   hooks/        useTmdb (React Query), useShortsFeed, useDebounce, useMediaQuery
-  lib/          library.js: kitaplık veri modeli (doğrulama + birleştirme), istemci ve sunucu ortak
+  lib/          istemci ve sunucu ortak: library (kitaplık modeli), seo (etiket + JSON-LD), genres (tür adresleri),
+                airing (yeni bölüm takibi), tmdbConfig
   pages/        Rota başına bir sayfa; MediaDetail film ve dizi detayını ortak işler
-  services/     tmdb, browse, shorts (akış motoru), youtube, sync, player
+  services/     tmdb, browse, recommend (Ne izlesem?), shorts (akış motoru), youtube, sync, player
   utils/        biçimlendirme ve yol yardımcıları
 ```
 

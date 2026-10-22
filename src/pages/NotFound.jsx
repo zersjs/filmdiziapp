@@ -1,15 +1,12 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { Helmet } from 'react-helmet-async';
+import Seo from '../components/Seo';
 import { FaCompass } from 'react-icons/fa';
 import { EmptyState } from '../components/UI/States';
 
 const NotFound = () => (
   <>
-    <Helmet>
-      <title>Sayfa bulunamadı - SINEFIX</title>
-      <meta name="robots" content="noindex" />
-    </Helmet>
+    <Seo title="Sayfa bulunamadı" noindex />
     <div className="container-custom flex min-h-[60vh] items-center justify-center py-12">
       <EmptyState
         icon={FaCompass}

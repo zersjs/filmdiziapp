@@ -2,13 +2,14 @@ import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { FaUser } from 'react-icons/fa';
 import { getImageUrl } from '../../services/tmdb';
+import { getPersonPath } from '../../utils/helpers';
 
 const PersonCard = ({ person, subtitle }) => {
   const [failed, setFailed] = useState(false);
   const role = subtitle ?? (person.character || person.roles?.[0]?.character || person.job || person.known_for_department);
 
   return (
-    <Link to={`/person/${person.id}`} className="group block min-w-0">
+    <Link to={getPersonPath(person)} className="group block min-w-0">
       <div className="relative aspect-[2/3] overflow-hidden rounded-xl border border-white/5 bg-[#111]">
         {person.profile_path && !failed ? (
           <img

@@ -1,11 +1,17 @@
-import React, { useMemo, useState } from 'react';
-import { Link, useParams, useSearchParams } from 'react-router-dom';
-import { Helmet } from 'react-helmet-async';
+import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { Link, Navigate, useLocation, useParams, useSearchParams } from 'react-router-dom';
 import {
   FaPlay, FaStar, FaHeart, FaShareAlt, FaPlus, FaCheck, FaYoutube, FaImdb, FaExternalLinkAlt, FaFilm, FaTv,
 } from 'react-icons/fa';
 import { getImageUrl } from '../services/tmdb';
-import { useDetail, useImages, useReviews, useSeason } from '../hooks';
+import { useCollection, useDetail, useImages, useReviews, useSeason } from '../hooks';
+import { genreById, genrePath } from '../lib/genres';
+import { mediaSeo } from '../lib/seo';
+import Seo, { getSiteUrl } from '../components/Seo';
+import Breadcrumbs from '../components/UI/Breadcrumbs';
+import WatchProviders from '../components/Detail/WatchProviders';
+import { MovieEndTime, NextEpisode } from '../components/Detail/AiringInfo';
+import { isTypingTarget, pop } from '../utils/dom';
 import { useApp } from '../contexts';
 import { useToast } from '../components/UI/Toast';
 import MediaRow, { Row } from '../components/UI/MediaRow';
@@ -18,9 +24,62 @@ import EpisodeList, { SeasonSelect, orderSeasons } from '../components/Detail/Ep
 import { DetailSkeleton, Spinner } from '../components/UI/Loading';
 import { EmptyState, ErrorState } from '../components/UI/States';
 import {
-  formatCurrency, formatDate, formatNumber, formatRuntime, getCertification, getLanguageName,
-  getMediaLabel, getStatusText, getTvCertification, getWatchPath, getYear, shareOrCopy, truncateText,
+  createSlug, formatCurrency, formatDate, formatNumber, formatRuntime, getCertification, getLanguageName,
+  getMediaLabel, getPersonPath, getStatusText, getTvCertification, getWatchPath, getYear, isFutureDate,
+  shareOrCopy, truncateText,
 } from '../utils/helpers';
+
+// Aktif sekmenin altındaki çizgi sekmeler arasında kayarak hareket eder.
+const TabBar = ({ tabs, activeTab, onSelect }) => {
+  const listRef = useRef(null);
+  const [indicator, setIndicator] = useState(null);
+
+  useLayoutEffect(() => {
+    const list = listRef.current;
+    const measure = () => {
+      const tab = list?.querySelector('[aria-selected="true"]');
+      if (!tab) return;
+      setIndicator({ left: tab.offsetLeft + 14, width: tab.offsetWidth - 28 });
+      const visibleStart = list.scrollLeft;
+      const visibleEnd = visibleStart + list.clientWidth;
+      if (tab.offsetLeft < visibleStart || tab.offsetLeft + tab.offsetWidth > visibleEnd) {
+        list.scrollTo({ left: tab.offsetLeft - 16, behavior: 'smooth' });
+      }
+    };
+    measure();
+    window.addEventListener('resize', measure);
+    document.fonts?.ready?.then(measure).catch(() => {});
+    return () => window.removeEventListener('resize', measure);
+  }, [activeTab, tabs]);
+
+  return (
+    <nav className="tabs" aria-label="İçerik bölümleri">
+      <div className="container-custom">
+        <div ref={listRef} className={`tabs-list -mx-[14px] ${indicator ? 'has-indicator' : ''}`} role="tablist">
+          {tabs.map(tab => (
+            <button
+              key={tab.id}
+              type="button"
+              role="tab"
+              aria-selected={activeTab === tab.id}
+              className={`tab ${activeTab === tab.id ? 'active' : ''}`}
+              onClick={() => onSelect(tab.id)}
+            >
+              {tab.label}
+            </button>
+          ))}
+          {indicator && (
+            <span
+              className="tab-indicator"
+              style={{ width: indicator.width, transform: `translateX(${indicator.left}px)` }}
+              aria-hidden="true"
+            />
+          )}
+        </div>
+      </div>
+    </nav>
+  );
+};
 
 const Fact = ({ label, children }) => (children ? (
   <div className="fact">
@@ -61,11 +120,15 @@ const OverviewTab = ({ media, mediaType, onShowCast }) => {
               {people.map(person => (
                 <div key={`${person.role}-${person.id}`}>
                   <p className="text-xs text-white/40">{person.role}</p>
-                  <Link to={`/person/${person.id}`} className="text-sm font-semibold hover:underline">{person.name}</Link>
+                  <Link to={getPersonPath(person)} className="text-sm font-semibold hover:underline">{person.name}</Link>
                 </div>
               ))}
             </div>
           )}
+
+          <div className="mt-8">
+            <WatchProviders media={media} mediaType={mediaType} />
+          </div>
         </div>
 
         <aside className="surface p-5">
@@ -122,8 +185,28 @@ const OverviewTab = ({ media, mediaType, onShowCast }) => {
         </Row>
       )}
 
+      {media.belongs_to_collection && <CollectionRow collection={media.belongs_to_collection} currentId={media.id} />}
+
       <MediaRow title="Bunları da beğenebilirsin" items={recommendations} mediaType={mediaType} />
     </div>
+  );
+};
+
+// Serinin tüm filmleri vizyon sırasıyla; bulunulan film işaretlenir.
+const CollectionRow = ({ collection, currentId }) => {
+  const { data, isLoading } = useCollection(collection.id);
+  const parts = data?.parts || [];
+  if (!isLoading && parts.length < 2) return null;
+  const position = parts.findIndex(part => part.id === currentId);
+  return (
+    <MediaRow
+      title={data?.name || collection.name}
+      actions={position >= 0 && <span className="text-xs text-white/40">{position + 1}. film · {parts.length} film</span>}
+      items={parts}
+      mediaType="movie"
+      loading={isLoading}
+      currentId={currentId}
+    />
   );
 };
 
@@ -212,12 +295,29 @@ const ReviewsTab = ({ media, mediaType }) => {
 };
 
 const MediaDetail = ({ mediaType }) => {
-  const { id } = useParams();
+  const { id, slug } = useParams();
+  const location = useLocation();
   const [searchParams, setSearchParams] = useSearchParams();
   const { data: media, isLoading, isError, error, refetch } = useDetail(mediaType, id);
   const { actions } = useApp();
   const { toast } = useToast();
   const [trailerOpen, setTrailerOpen] = useState(false);
+  const shortcuts = useRef({});
+
+  // t: fragman, l: izleme listesi, f: favori (bkz. "?" kısayol penceresi)
+  useEffect(() => {
+    const onKeyDown = (event) => {
+      if (event.ctrlKey || event.metaKey || event.altKey || isTypingTarget(event.target)) return;
+      if (document.querySelector('[aria-modal="true"]')) return;
+      const handler = shortcuts.current[event.key];
+      if (handler) {
+        event.preventDefault();
+        handler();
+      }
+    };
+    document.addEventListener('keydown', onKeyDown);
+    return () => document.removeEventListener('keydown', onKeyDown);
+  }, []);
 
   const isTv = mediaType === 'tv';
   const tabs = useMemo(() => [
@@ -260,6 +360,12 @@ const MediaDetail = ({ mediaType }) => {
   }
 
   const title = media.title || media.name;
+  // Eksik veya eski slug'lı adresler tek bir kalıcı adrese toplanır (çift içerik önlenir).
+  const canonicalSlug = createSlug(title);
+  if (slug !== canonicalSlug || String(media.id) !== id) {
+    return <Navigate to={`/${mediaType}/${media.id}/${canonicalSlug}${location.search}`} replace />;
+  }
+  const seo = mediaSeo(mediaType, media, getSiteUrl());
   const date = media.release_date || media.first_air_date;
   const year = getYear(date);
   const runtime = formatRuntime(isTv ? media.episode_run_time?.[0] : media.runtime);
@@ -279,14 +385,27 @@ const MediaDetail = ({ mediaType }) => {
     ? progress?.season ? `Devam et S${progress.season}·B${progress.episode}` : 'İlk bölümü izle'
     : 'İzle';
 
-  const toggleFavorite = () => {
+  const genreLink = (genre) => {
+    const known = genreById(mediaType, genre.id);
+    return known ? genrePath(mediaType, known) : isTv ? '/series' : '/movies';
+  };
+
+  const toggleFavorite = (event) => {
+    pop(event?.currentTarget || document.querySelector('[data-action="favorite"]'));
     const added = actions.toggleFavorite(media, mediaType);
     toast.success(added ? 'Favorilere eklendi' : 'Favorilerden çıkarıldı', 2000);
   };
 
-  const toggleWatchLater = () => {
+  const toggleWatchLater = (event) => {
+    pop(event?.currentTarget || document.querySelector('[data-action="watch-later"]'));
     const added = actions.toggleWatchLater(media, mediaType);
     toast.success(added ? 'İzleme listene eklendi' : 'İzleme listenden çıkarıldı', 2000);
+  };
+
+  shortcuts.current = {
+    t: trailer ? () => setTrailerOpen(true) : undefined,
+    l: toggleWatchLater,
+    f: toggleFavorite,
   };
 
   const share = async () => {
@@ -297,12 +416,15 @@ const MediaDetail = ({ mediaType }) => {
 
   return (
     <>
-      <Helmet>
-        <title>{`${title}${year ? ` (${year})` : ''} - SINEFIX`}</title>
-        <meta name="description" content={truncateText(media.overview, 160)} />
-        <meta property="og:title" content={title} />
-        {media.backdrop_path && <meta property="og:image" content={getImageUrl(media.backdrop_path, 'w780')} />}
-      </Helmet>
+      <Seo
+        title={seo.title}
+        description={seo.description}
+        path={seo.path}
+        image={seo.image}
+        imageAlt={seo.imageAlt}
+        type={seo.ogType}
+        jsonLd={seo.jsonLd}
+      />
 
       <section className="detail-hero">
         {media.backdrop_path && (
@@ -312,6 +434,7 @@ const MediaDetail = ({ mediaType }) => {
               srcSet={`${getImageUrl(media.backdrop_path, 'w780')} 780w, ${getImageUrl(media.backdrop_path, 'w1280')} 1280w, ${getImageUrl(media.backdrop_path, 'original')} 1920w`}
               sizes="100vw"
               alt=""
+              fetchpriority="high"
             />
           </div>
         )}
@@ -327,6 +450,7 @@ const MediaDetail = ({ mediaType }) => {
             </div>
 
             <div className="min-w-0 self-end">
+              <Breadcrumbs items={seo.breadcrumbs} hideCurrent className="detail-breadcrumbs mb-3 hidden sm:block" />
               <div className="mb-2 flex flex-wrap items-center gap-2">
                 <span className="badge">{getMediaLabel(mediaType)}</span>
                 {certification && <span className="badge border border-white/15 bg-transparent">{certification}</span>}
@@ -346,10 +470,15 @@ const MediaDetail = ({ mediaType }) => {
                   <span>{media.number_of_seasons} sezon · {media.number_of_episodes} bölüm</span>
                 )}
               </div>
+              {isTv ? (
+                <NextEpisode media={media} />
+              ) : (
+                !isFutureDate(media.release_date) && <MovieEndTime runtime={media.runtime} />
+              )}
               {media.genres?.length > 0 && (
                 <div className="mt-4 hidden flex-wrap gap-2 sm:flex">
                   {media.genres.map(genre => (
-                    <Link key={genre.id} to={`${isTv ? '/series' : '/movies'}?genre=${genre.id}`} className="chip !h-7 !px-3 !text-xs">
+                    <Link key={genre.id} to={genreLink(genre)} className="chip !h-7 !px-3 !text-xs">
                       {genre.name}
                     </Link>
                   ))}
@@ -361,7 +490,7 @@ const MediaDetail = ({ mediaType }) => {
               {media.genres?.length > 0 && (
                 <div className="no-scrollbar -mx-[var(--gutter)] mb-4 flex gap-2 overflow-x-auto px-[var(--gutter)] sm:hidden">
                   {media.genres.map(genre => (
-                    <Link key={genre.id} to={`${isTv ? '/series' : '/movies'}?genre=${genre.id}`} className="chip !h-7 flex-shrink-0 !px-3 !text-xs">
+                    <Link key={genre.id} to={genreLink(genre)} className="chip !h-7 flex-shrink-0 !px-3 !text-xs">
                       {genre.name}
                     </Link>
                   ))}
@@ -382,6 +511,7 @@ const MediaDetail = ({ mediaType }) => {
                   <button
                     type="button"
                     onClick={toggleWatchLater}
+                    data-action="watch-later"
                     className={`detail-action ${inWatchLater ? 'active' : ''}`}
                     aria-label={inWatchLater ? 'İzleme listesinden çıkar' : 'İzleme listesine ekle'}
                     aria-pressed={inWatchLater}
@@ -393,6 +523,7 @@ const MediaDetail = ({ mediaType }) => {
                   <button
                     type="button"
                     onClick={toggleFavorite}
+                    data-action="favorite"
                     className={`detail-action ${isFavorite ? 'active-red' : ''}`}
                     aria-label={isFavorite ? 'Favorilerden çıkar' : 'Favorilere ekle'}
                     aria-pressed={isFavorite}
@@ -412,24 +543,7 @@ const MediaDetail = ({ mediaType }) => {
         </div>
       </section>
 
-      <nav className="tabs" aria-label="İçerik bölümleri">
-        <div className="container-custom">
-          <div className="tabs-list -mx-[14px]" role="tablist">
-            {tabs.map(tab => (
-              <button
-                key={tab.id}
-                type="button"
-                role="tab"
-                aria-selected={activeTab === tab.id}
-                className={`tab ${activeTab === tab.id ? 'active' : ''}`}
-                onClick={() => setTab(tab.id)}
-              >
-                {tab.label}
-              </button>
-            ))}
-          </div>
-        </div>
-      </nav>
+      <TabBar tabs={tabs} activeTab={activeTab} onSelect={setTab} />
 
       <div className="pb-6 pt-8" key={`${mediaType}-${media.id}-${activeTab}`}>
         {activeTab === 'overview' && <OverviewTab media={media} mediaType={mediaType} onShowCast={() => setTab('cast')} />}

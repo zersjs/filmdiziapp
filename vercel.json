@@ -1,6 +1,13 @@
 {
+  "functions": {
+    "api/render.js": { "includeFiles": "dist/index.html", "maxDuration": 10 },
+    "api/sitemap.js": { "maxDuration": 20 }
+  },
   "rewrites": [
-    { "source": "/((?!api/).*)", "destination": "/" }
+    { "source": "/sitemap.xml", "destination": "/api/sitemap" },
+    { "source": "/sitemaps/:name.xml", "destination": "/api/sitemap?name=:name" },
+    { "source": "/robots.txt", "destination": "/api/robots" },
+    { "source": "/((?!api/|assets/).*)", "destination": "/api/render?path=/$1" }
   ],
   "headers": [
     {

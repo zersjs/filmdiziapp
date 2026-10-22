@@ -1,8 +1,8 @@
 import React, { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Helmet } from 'react-helmet-async';
 import { FaTrash } from 'react-icons/fa';
 import MovieCard from '../UI/MovieCard';
+import Seo from '../Seo';
 import { ConfirmModal } from '../UI/Modal';
 import { EmptyState } from '../UI/States';
 import { useToast } from '../UI/Toast';
@@ -46,9 +46,7 @@ const LibraryPage = ({ title, description, icon: Icon, items, onClear, emptyTitl
 
   return (
     <>
-      <Helmet>
-        <title>{title} - SINEFIX</title>
-      </Helmet>
+      <Seo title={title} noindex />
 
       <div className="page container-custom">
         <header className="mb-6 flex flex-wrap items-end justify-between gap-4">

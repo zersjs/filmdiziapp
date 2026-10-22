@@ -1,10 +1,10 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Helmet } from 'react-helmet-async';
 import {
   FaBookmark, FaHeart, FaPlay, FaSyncAlt, FaCopy, FaEye, FaEyeSlash, FaDownload, FaUpload, FaTrash, FaLink, FaShieldAlt,
 } from 'react-icons/fa';
 import { useApp } from '../contexts';
+import Seo from '../components/Seo';
 import { useToast } from '../components/UI/Toast';
 import { ConfirmModal } from '../components/UI/Modal';
 import { SYNC_ERROR_MESSAGES, SyncError, formatSyncKey, isValidSyncKey, normalizeSyncKey } from '../services/sync';
@@ -236,9 +236,7 @@ const Settings = () => {
 
   return (
     <>
-      <Helmet>
-        <title>Kitaplık ve senkronizasyon - SINEFIX</title>
-      </Helmet>
+      <Seo title="Kitaplık ve senkronizasyon" noindex />
 
       <div className="page container-custom max-w-3xl">
         <h1 className="page-title">Kitaplık ve senkronizasyon</h1>

@@ -5,7 +5,7 @@ import { PRIMARY_NAV } from './navigation';
 import MobileMenu from './MobileMenu';
 import { useApp } from '../../contexts';
 
-const LIBRARY_PATHS = ['/favorites', '/watch-later', '/ayarlar', '/search', '/sss', '/iletisim'];
+const LIBRARY_PATHS = ['/favorites', '/watch-later', '/ayarlar', '/search', '/sss', '/iletisim', '/ne-izlesem'];
 
 const MobileBottomNav = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -19,7 +19,7 @@ const MobileBottomNav = () => {
   return (
     <>
       <nav className="bottom-nav" aria-label="Alt menü">
-        {PRIMARY_NAV.map(({ path, icon: Icon, label, end }) => (
+        {PRIMARY_NAV.filter(item => !item.desktopOnly).map(({ path, icon: Icon, label, end }) => (
           <NavLink key={path} to={path} end={end} className={({ isActive }) => `bottom-nav-item ${isActive ? 'active' : ''}`}>
             <Icon />
             <span className="bottom-nav-label">{label}</span>

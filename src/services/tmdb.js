@@ -1,11 +1,12 @@
 import axios from 'axios';
+import {
+  DEFAULT_TMDB_ACCESS_TOKEN, TMDB_API_BASE, TMDB_IMAGE_BASE, WATCH_REGION, pickTmdbApiKey,
+} from '../lib/tmdbConfig';
 
-const API_KEY = import.meta.env.VITE_TMDB_API_KEY || '095262b2872d2235d6da623056c10cd9';
-const ACCESS_TOKEN =
-  import.meta.env.VITE_TMDB_ACCESS_TOKEN ||
-  'eyJhbGciOiJIUzI1NiJ9.eyJhdWQiOiIwOTUyNjJiMjg3MmQyMjM1ZDZkYTYyMzA1NmMxMGNkOSIsIm5iZiI6MTY3OTE0ODgzMy41NjksInN1YiI6IjY0MTVjNzIxMGQ1ZDg1MDA5YmExOGYxOSIsInNjb3BlcyI6WyJhcGlfcmVhZCJdLCJ2ZXJzaW9uIjoxfQ.PVQYPczKDgevfrrgQyE52x7xJj0wSHUZpI6KE0Z1xGo';
-const BASE_URL = import.meta.env.VITE_TMDB_BASE_URL || 'https://api.themoviedb.org/3';
-const IMAGE_BASE_URL = import.meta.env.VITE_TMDB_IMAGE_BASE_URL || 'https://image.tmdb.org/t/p';
+const API_KEY = pickTmdbApiKey(import.meta.env.VITE_TMDB_API_KEY);
+const ACCESS_TOKEN = import.meta.env.VITE_TMDB_ACCESS_TOKEN || DEFAULT_TMDB_ACCESS_TOKEN;
+const BASE_URL = import.meta.env.VITE_TMDB_BASE_URL || TMDB_API_BASE;
+const IMAGE_BASE_URL = import.meta.env.VITE_TMDB_IMAGE_BASE_URL || TMDB_IMAGE_BASE;
 
 const tmdbApi = axios.create({
   baseURL: BASE_URL,
@@ -40,7 +41,7 @@ export const movieService = {
 
   getDetail: (id) => tmdbApi.get(`/movie/${id}`, {
     params: {
-      append_to_response: 'credits,videos,recommendations,similar,external_ids,release_dates',
+      append_to_response: 'credits,videos,recommendations,similar,external_ids,release_dates,watch/providers',
       include_video_language: 'tr,en,null'
     }
   }),
@@ -68,7 +69,7 @@ export const tvService = {
 
   getDetail: (id) => tmdbApi.get(`/tv/${id}`, {
     params: {
-      append_to_response: 'videos,recommendations,similar,external_ids,content_ratings,aggregate_credits',
+      append_to_response: 'videos,recommendations,similar,external_ids,content_ratings,aggregate_credits,watch/providers',
       include_video_language: 'tr,en,null'
     }
   }),
@@ -140,6 +141,11 @@ export const trendingService = {
   getTv: (timeWindow = 'week') => tmdbApi.get(`/trending/tv/${timeWindow}`),
   
   getPerson: (timeWindow = 'week') => tmdbApi.get(`/trending/person/${timeWindow}`)
+};
+
+export const watchProviderService = {
+  // Türkiye'deki platformlar (Netflix, Prime Video, Disney+...), görüntüleme önceliğine göre
+  getList: (mediaType) => tmdbApi.get(`/watch/providers/${mediaType}`, { params: { watch_region: WATCH_REGION } })
 };
 
 export const collectionService = {

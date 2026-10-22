@@ -1,5 +1,6 @@
-import { keepPreviousData, useQuery } from '@tanstack/react-query';
+import { keepPreviousData, useQueries, useQuery } from '@tanstack/react-query';
 import {
+  collectionService,
   discoverService,
   genreService,
   movieService,
@@ -7,8 +8,11 @@ import {
   searchService,
   trendingService,
   tvService,
+  watchProviderService,
 } from '../services/tmdb';
+import { WATCH_REGION } from '../lib/tmdbConfig';
 import { buildDiscoverParams } from '../services/browse';
+import { buildRecommendParams, typesFor } from '../services/recommend';
 
 const unwrap = (request) => request.then(response => response.data);
 
@@ -94,6 +98,54 @@ export const useDiscover = (mediaType, filters) =>
     ),
     select: data => withMediaType(data, mediaType),
     placeholderData: keepPreviousData,
+  });
+
+export const useRecommendations = (criteria, page, enabled = true) =>
+  useQueries({
+    queries: typesFor(criteria.type).map(mediaType => ({
+      queryKey: ['recommend', mediaType, criteria, page],
+      queryFn: () => unwrap(
+        (mediaType === 'tv' ? discoverService.tv : discoverService.movie)(buildRecommendParams(mediaType, criteria, page))
+      ),
+      select: data => withMediaType(data, mediaType),
+      enabled,
+      staleTime: 30 * 60 * 1000,
+    })),
+  });
+
+// Dizilerin yayın takvimi için hafif detay (ek veri olmadan); saatlerce taze sayılır.
+export const useShowsAiring = (ids) =>
+  useQueries({
+    queries: ids.map(id => ({
+      queryKey: ['tv-basic', String(id)],
+      queryFn: () => unwrap(tvService.getBasic(id, 'tr-TR')),
+      staleTime: 6 * 60 * 60 * 1000,
+    })),
+  });
+
+export const useCollection = (id) =>
+  useQuery({
+    queryKey: ['collection', String(id)],
+    queryFn: () => unwrap(collectionService.getDetail(id)),
+    select: data => ({
+      ...data,
+      parts: (data.parts || [])
+        .map(part => ({ ...part, media_type: 'movie' }))
+        .sort((a, b) => (a.release_date || '9999').localeCompare(b.release_date || '9999')),
+    }),
+    enabled: !!id,
+  });
+
+// Türkiye'de en çok kullanılan platformlar (TMDB/JustWatch görüntüleme önceliğine göre)
+export const useWatchProviders = (mediaType, limit = 14) =>
+  useQuery({
+    queryKey: ['watch-providers', mediaType],
+    queryFn: () => unwrap(watchProviderService.getList(mediaType)),
+    select: data => (data.results || [])
+      .filter(p => p.display_priorities?.[WATCH_REGION] !== undefined)
+      .sort((a, b) => a.display_priorities[WATCH_REGION] - b.display_priorities[WATCH_REGION])
+      .slice(0, limit),
+    staleTime: 24 * 60 * 60 * 1000,
   });
 
 const searchEndpoints = {

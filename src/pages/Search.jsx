@@ -1,9 +1,9 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { Helmet } from 'react-helmet-async';
 import { FaSearch, FaTimes } from 'react-icons/fa';
 import { useDebounce, useSearch, useTrending } from '../hooks';
 import MovieCard from '../components/UI/MovieCard';
+import Seo from '../components/Seo';
 import PersonCard from '../components/UI/PersonCard';
 import Pagination from '../components/UI/Pagination';
 import MediaRow from '../components/UI/MediaRow';
@@ -72,9 +72,7 @@ const Search = () => {
 
   return (
     <>
-      <Helmet>
-        <title>{query ? `“${query}” arama sonuçları - SINEFIX` : 'Ara - SINEFIX'}</title>
-      </Helmet>
+      <Seo title={query ? `“${query}” arama sonuçları` : 'Ara'} noindex />
 
       <div className="page container-custom">
         <form

@@ -1,11 +1,11 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
-import { Helmet } from 'react-helmet-async';
 import { FaArrowLeft, FaChevronLeft, FaChevronRight, FaStar, FaInfoCircle } from 'react-icons/fa';
 import { getImageUrl } from '../services/tmdb';
 import { playerService } from '../services/player';
 import { useDetail, useSeason } from '../hooks';
 import { useApp } from '../contexts';
+import Seo from '../components/Seo';
 import EpisodeList, { SeasonSelect, orderSeasons } from '../components/Detail/EpisodeList';
 import { Spinner } from '../components/UI/Loading';
 import { EmptyState, ErrorState } from '../components/UI/States';
@@ -123,9 +123,7 @@ const Watch = () => {
 
   return (
     <>
-      <Helmet>
-        <title>{`${title}${isTv ? ` S${season} B${episode}` : ''} izle - SINEFIX`}</title>
-      </Helmet>
+      <Seo title={`${title}${isTv ? ` S${season} B${episode}` : ''} izle`} noindex />
 
       <div className="container-custom flex items-center gap-3 py-3 lg:py-5">
         <Link to={getDetailPath(media, type)} className="icon-btn bordered flex-shrink-0" aria-label={`${title} detayına dön`}>

@@ -12,7 +12,7 @@ describe('createSlug', () => {
 
   test('Latin olmayan başlıklarda boş slug üretmez', () => {
     expect(createSlug('葬送のフリーレン')).toBe('izle');
-    expect(createSlug('')).toBe('');
+    expect(createSlug('')).toBe('izle');
   });
 });
 

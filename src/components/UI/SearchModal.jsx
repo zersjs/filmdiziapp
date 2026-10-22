@@ -1,23 +1,55 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
-import { FaSearch, FaTimes, FaFilm, FaTv, FaStar, FaArrowRight } from 'react-icons/fa';
+import { FaSearch, FaTimes, FaFilm, FaTv, FaStar, FaArrowRight, FaHistory, FaMagic } from 'react-icons/fa';
 import { getImageUrl } from '../../services/tmdb';
 import { useDebounce, useSearch } from '../../hooks';
+import { genreBySlug, genrePath } from '../../lib/genres';
 import { getDetailPath, getMediaLabel, getReleaseDate, getTitle, getYear } from '../../utils/helpers';
 import { useBodyScrollLock } from './Modal';
 import { Spinner } from './Loading';
 
+const quickGenre = (mediaType, slug, name) => ({ name, path: genrePath(mediaType, genreBySlug(mediaType, slug)) });
+
 export const QUICK_GENRES = [
-  { name: 'Aksiyon', path: '/movies?genre=28' },
-  { name: 'Komedi', path: '/movies?genre=35' },
-  { name: 'Dram', path: '/movies?genre=18' },
-  { name: 'Bilim Kurgu', path: '/movies?genre=878' },
-  { name: 'Korku', path: '/movies?genre=27' },
-  { name: 'Animasyon', path: '/movies?genre=16' },
-  { name: 'Suç', path: '/series?genre=80' },
-  { name: 'Belgesel', path: '/movies?genre=99' },
+  quickGenre('movie', 'aksiyon', 'Aksiyon'),
+  quickGenre('movie', 'komedi', 'Komedi'),
+  quickGenre('movie', 'dram', 'Dram'),
+  quickGenre('movie', 'bilim-kurgu', 'Bilim Kurgu'),
+  quickGenre('movie', 'korku', 'Korku'),
+  quickGenre('movie', 'animasyon', 'Animasyon'),
+  quickGenre('tv', 'suc', 'Suç dizileri'),
+  quickGenre('movie', 'belgesel', 'Belgesel'),
 ];
+
+// Son aramalar yalnızca bu cihazda tutulur (kitaplık senkronuna dahil değildir).
+const RECENT_KEY = 'sinefix:recent-searches';
+const RECENT_LIMIT = 6;
+
+const readRecent = () => {
+  try {
+    const value = JSON.parse(localStorage.getItem(RECENT_KEY) || '[]');
+    return Array.isArray(value) ? value.filter(v => typeof v === 'string').slice(0, RECENT_LIMIT) : [];
+  } catch {
+    return [];
+  }
+};
+
+const writeRecent = (list) => {
+  try {
+    if (list.length) localStorage.setItem(RECENT_KEY, JSON.stringify(list));
+    else localStorage.removeItem(RECENT_KEY);
+  } catch {
+    // Gizli sekme veya kota: son aramalar olmadan devam et
+  }
+};
+
+export const rememberSearch = (query) => {
+  const term = query.trim();
+  if (term.length < 2) return;
+  const lower = term.toLocaleLowerCase('tr-TR');
+  writeRecent([term, ...readRecent().filter(v => v.toLocaleLowerCase('tr-TR') !== lower)].slice(0, RECENT_LIMIT));
+};
 
 const SearchModal = ({ isOpen, onClose }) => {
   const navigate = useNavigate();
@@ -25,6 +57,8 @@ const SearchModal = ({ isOpen, onClose }) => {
   const listRef = useRef(null);
   const [query, setQuery] = useState('');
   const [selected, setSelected] = useState(-1);
+  const [recent, setRecent] = useState([]);
+  const lastPointer = useRef('');
   const debounced = useDebounce(query.trim(), 300);
   const { data, isFetching, isError } = useSearch(isOpen ? debounced : '');
 
@@ -38,6 +72,8 @@ const SearchModal = ({ isOpen, onClose }) => {
     if (isOpen) {
       setQuery('');
       setSelected(-1);
+      setRecent(readRecent());
+      lastPointer.current = '';
     }
   }, [isOpen]);
 
@@ -53,7 +89,32 @@ const SearchModal = ({ isOpen, onClose }) => {
   };
 
   const showAll = () => {
-    if (query.trim()) go(`/search?q=${encodeURIComponent(query.trim())}`);
+    if (!query.trim()) return;
+    rememberSearch(query);
+    go(`/search?q=${encodeURIComponent(query.trim())}`);
+  };
+
+  const openResult = (item) => {
+    rememberSearch(query);
+    go(getDetailPath(item));
+  };
+
+  // Seçim yalnızca imleç gerçekten hareket edince değişir. Sonuçlar duran imlecin altına
+  // yerleştiğinde tarayıcının ürettiği yapay mousemove olayları, Enter'ın yazılan aramayı
+  // değil imlecin altındaki sonucu açmasına yol açıyordu.
+  const onPointerMove = (event) => {
+    const position = `${event.screenX},${event.screenY}`;
+    const previous = lastPointer.current;
+    lastPointer.current = position;
+    if (!previous || previous === position) return;
+    const option = event.target.closest('[data-index]');
+    if (option) setSelected(Number(option.dataset.index));
+  };
+
+  const clearRecent = () => {
+    writeRecent([]);
+    setRecent([]);
+    inputRef.current?.focus();
   };
 
   const onKeyDown = (event) => {
@@ -68,7 +129,7 @@ const SearchModal = ({ isOpen, onClose }) => {
       setSelected(i => Math.max(i - 1, -1));
     } else if (event.key === 'Enter') {
       event.preventDefault();
-      if (selected >= 0 && results[selected]) go(getDetailPath(results[selected]));
+      if (selected >= 0 && results[selected]) openResult(results[selected]);
       else showAll();
     }
   };
@@ -103,14 +164,37 @@ const SearchModal = ({ isOpen, onClose }) => {
 
         <div ref={listRef} className="flex-1 overflow-y-auto overscroll-contain p-2 sm:p-3">
           {query.trim() === '' && (
-            <div className="p-3">
-              <p className="mb-3 text-xs font-semibold text-white/40">Türlere göz at</p>
-              <div className="flex flex-wrap gap-2">
-                {QUICK_GENRES.map(genre => (
-                  <button key={genre.name} type="button" className="chip" onClick={() => go(genre.path)}>
-                    {genre.name}
+            <div className="space-y-5 p-3">
+              {recent.length > 0 && (
+                <div>
+                  <div className="mb-2 flex items-center justify-between">
+                    <p className="text-xs font-semibold text-white/40">Son aramalar</p>
+                    <button type="button" className="text-xs text-white/40 hover:text-white" onClick={clearRecent}>Temizle</button>
+                  </div>
+                  <ul className="-mx-1">
+                    {recent.map(term => (
+                      <li key={term}>
+                        <button type="button" className="recent-search" onClick={() => setQuery(term)}>
+                          <FaHistory className="text-xs text-white/30" />
+                          <span className="truncate">{term}</span>
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              <div>
+                <p className="mb-3 text-xs font-semibold text-white/40">Türlere göz at</p>
+                <div className="flex flex-wrap gap-2">
+                  <button type="button" className="chip chip-accent" onClick={() => go('/ne-izlesem')}>
+                    <FaMagic className="text-[11px]" /> Ne izlesem?
                   </button>
-                ))}
+                  {QUICK_GENRES.map(genre => (
+                    <button key={genre.name} type="button" className="chip" onClick={() => go(genre.path)}>
+                      {genre.name}
+                    </button>
+                  ))}
+                </div>
               </div>
             </div>
           )}
@@ -124,7 +208,7 @@ const SearchModal = ({ isOpen, onClose }) => {
           )}
 
           {results.length > 0 && (
-            <ul role="listbox" aria-label="Arama sonuçları">
+            <ul role="listbox" aria-label="Arama sonuçları" onMouseMove={onPointerMove}>
               {results.map((item, index) => {
                 const year = getYear(getReleaseDate(item));
                 return (
@@ -135,8 +219,8 @@ const SearchModal = ({ isOpen, onClose }) => {
                       aria-selected={selected === index}
                       data-selected={selected === index}
                       className={`search-result ${selected === index ? 'selected' : ''}`}
-                      onMouseEnter={() => setSelected(index)}
-                      onClick={() => go(getDetailPath(item))}
+                      data-index={index}
+                      onClick={() => openResult(item)}
                     >
                       <span className="search-result-poster">
                         {item.poster_path ? (
@@ -178,6 +262,7 @@ const SearchModal = ({ isOpen, onClose }) => {
           <span className="flex items-center gap-1.5"><kbd>↑</kbd><kbd>↓</kbd> gezin</span>
           <span className="flex items-center gap-1.5"><kbd>Enter</kbd> aç</span>
           <span className="flex items-center gap-1.5"><kbd>Esc</kbd> kapat</span>
+          <span className="ml-auto flex items-center gap-1.5"><kbd>?</kbd> tüm kısayollar</span>
         </div>
       </div>
     </div>,

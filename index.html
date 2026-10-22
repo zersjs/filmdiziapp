@@ -3,13 +3,13 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <script>document.documentElement.classList.add('js')</script>
+    <style>.js .ssr-shell{display:none}</style>
 
-    <title>SINEFIX - Film ve Dizi Platformu</title>
-    <meta
-      name="description"
-      content="Popüler filmleri ve dizileri keşfedin, fragmanları izleyin, izleme listenizi oluşturun."
-    />
-    <meta name="robots" content="index, follow" />
+    <!-- Bu blok derlemede ana sayfa için, sunucuda (api/render.js) her adres için yeniden yazılır. -->
+    <!--seo-head-->
+    <title>SINEFIX — Film ve dizi keşfet</title>
+    <!--/seo-head-->
 
     <meta name="theme-color" content="#050505" />
     <meta name="color-scheme" content="dark" />
@@ -17,16 +17,6 @@
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="SINEFIX" />
-
-    <meta property="og:title" content="SINEFIX - Film ve Dizi Platformu" />
-    <meta
-      property="og:description"
-      content="Popüler filmleri ve dizileri keşfedin, fragmanları izleyin, izleme listenizi oluşturun."
-    />
-    <meta property="og:type" content="website" />
-    <meta property="og:site_name" content="SINEFIX" />
-    <meta property="og:locale" content="tr_TR" />
-    <meta name="twitter:card" content="summary_large_image" />
 
     <link rel="icon" type="image/svg+xml" href="/icon.svg" />
     <link rel="apple-touch-icon" href="/icon.svg" />
@@ -42,7 +32,8 @@
     />
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root"><!--seo-body--><!--/seo-body--></div>
+    <noscript>SINEFIX'in tüm özelliklerini kullanmak için JavaScript'i etkinleştirin.</noscript>
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>

@@ -2,6 +2,8 @@
 // Tüm sorgular /discover üzerinden yapılır; böylece tür, yıl ve puan filtreleri
 // her sıralama seçeneğiyle birlikte çalışır.
 
+import { WATCH_REGION } from '../lib/tmdbConfig';
+
 export const MAX_TMDB_PAGE = 500;
 
 export const BROWSE_CONFIG = {
@@ -45,20 +47,28 @@ const shiftDays = (base, days) => {
   return toIsoDate(date);
 };
 
-export const parseBrowseParams = (type, searchParams) => {
+// Tür, adres yolundan (/movies/genre/aksiyon) gelir; diğer filtreler sorgu parametresidir.
+export const parseBrowseParams = (type, searchParams, genreId = '') => {
   const sorts = BROWSE_CONFIG[type].sorts.map(s => s.value);
   const sort = searchParams.get('sort');
   const page = parseInt(searchParams.get('page'), 10);
+  const provider = searchParams.get('provider') || '';
   return {
     sort: sorts.includes(sort) ? sort : 'popular',
-    genre: searchParams.get('genre') || '',
+    genre: genreId ? String(genreId) : '',
     year: searchParams.get('year') || '',
     rating: searchParams.get('rating') || '',
+    provider: /^\d+$/.test(provider) ? provider : '',
     page: Number.isFinite(page) ? Math.min(Math.max(page, 1), MAX_TMDB_PAGE) : 1,
   };
 };
 
-export const buildDiscoverParams = (type, { sort, genre, year, rating, page = 1 }, today = new Date()) => {
+// Sıralama/yıl/puan/platform kombinasyonları ayrı sayfa olarak indekslenmez;
+// canonical adres tür (veya ana liste) sayfasının kendisidir.
+export const hasRefiningFilters = (filters) =>
+  filters.sort !== 'popular' || !!filters.year || !!filters.rating || !!filters.provider;
+
+export const buildDiscoverParams = (type, { sort, genre, year, rating, provider, page = 1 }, today = new Date()) => {
   const isMovie = type === 'movie';
   const dateField = isMovie ? 'primary_release_date' : 'first_air_date';
   const params = {
@@ -106,6 +116,11 @@ export const buildDiscoverParams = (type, { sort, genre, year, rating, page = 1 
   }
 
   if (genre) params.with_genres = genre;
+  if (provider) {
+    params.with_watch_providers = provider;
+    params.watch_region = WATCH_REGION;
+    params.with_watch_monetization_types = 'flatrate|free|ads';
+  }
   if (year) params[isMovie ? 'primary_release_year' : 'first_air_date_year'] = year;
   if (rating) {
     params['vote_average.gte'] = rating;

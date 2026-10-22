@@ -1,18 +1,23 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Helmet } from 'react-helmet-async';
 import { Link, useNavigate } from 'react-router-dom';
-import { FaPlay, FaStar, FaTimes, FaInfoCircle, FaPlus, FaCheck, FaFire } from 'react-icons/fa';
+import {
+  FaPlay, FaStar, FaTimes, FaInfoCircle, FaPlus, FaCheck, FaFire, FaCalendarAlt, FaMagic, FaArrowRight,
+} from 'react-icons/fa';
 import { getImageUrl } from '../services/tmdb';
+import { websiteJsonLd } from '../lib/seo';
+import Seo, { getSiteUrl } from '../components/Seo';
 import { createShortSlug } from '../services/shorts';
 import { useShortsPreview } from '../hooks/useShortsFeed';
-import { useMediaList, useTrending } from '../hooks';
+import { useMediaList, useShowsAiring, useTrending } from '../hooks';
+import { compareAiring, followedShowIds, pickAiringEpisode } from '../lib/airing';
 import { useApp } from '../contexts';
 import { useToast } from '../components/UI/Toast';
 import MediaRow, { Row } from '../components/UI/MediaRow';
 import { HeroSkeleton } from '../components/UI/Loading';
 import { ErrorState } from '../components/UI/States';
 import {
-  getDetailPath, getMediaLabel, getMediaType, getReleaseDate, getTitle, getWatchPath, getYear,
+  getDetailPath, getMediaLabel, getMediaType, getReleaseDate, getTitle, getWatchPath, getYear, isGenericEpisodeName,
+  relativeDay,
 } from '../utils/helpers';
 
 const HERO_COUNT = 6;
@@ -156,6 +161,59 @@ const ContinueWatchingRow = () => {
   );
 };
 
+// Kitaplıktaki dizilerin yeni ya da yaklaşan bölümleri. Bilgi yalnızca TMDB'den okunur;
+// hiçbir yere kayıt veya bildirim gönderilmez.
+const NewEpisodesRow = () => {
+  const { state } = useApp();
+  const ids = useMemo(() => followedShowIds(state), [state]);
+  const results = useShowsAiring(ids);
+  const now = new Date();
+  // Hepsi gelmeden çizilmez: sıralı satıra tek tek kart eklemek kaydırma konumunu oynatıyordu.
+  if (results.some(result => result.isLoading)) return null;
+  const entries = results
+    .map(result => result.data)
+    .filter(Boolean)
+    .map(show => ({ show, ...pickAiringEpisode(show, now) }))
+    .filter(entry => entry.kind)
+    .sort(compareAiring);
+
+  if (!entries.length) return null;
+
+  return (
+    <Row title="Takip ettiklerinde yeni bölümler" icon={<FaCalendarAlt className="text-[0.8em] text-white/50" />}>
+      {entries.map(({ show, kind, episode }) => {
+        const aired = kind === 'aired';
+        const image = episode.still_path ? getImageUrl(episode.still_path, 'w300') : show.backdrop_path && getImageUrl(show.backdrop_path, 'w780');
+        const href = aired
+          ? getWatchPath(show, 'tv', { season: episode.season_number, episode: episode.episode_number })
+          : `${getDetailPath(show, 'tv')}?tab=episodes`;
+        return (
+          <div key={show.id} className="row-item wide">
+            <Link to={href} className="cw-card">
+              <div className="cw-thumb">
+                {image && <img src={image} alt="" loading="lazy" />}
+                <span className={`episode-badge ${aired ? 'new' : ''}`}>
+                  {aired ? 'Yeni bölüm' : relativeDay(episode.air_date, now)}
+                </span>
+                <div className="cw-play">
+                  {aired && <span className="cw-play-icon"><FaPlay /></span>}
+                  <span className="min-w-0">
+                    <span className="block truncate text-sm font-bold">{getTitle(show)}</span>
+                    <span className="block truncate text-xs text-white/60">
+                      S{episode.season_number} · B{episode.episode_number}
+                      {isGenericEpisodeName(episode.name) ? '' : ` · ${episode.name}`}
+                    </span>
+                  </span>
+                </div>
+              </div>
+            </Link>
+          </div>
+        );
+      })}
+    </Row>
+  );
+};
+
 const ShortsRow = () => {
   const navigate = useNavigate();
   const { data = [], isLoading } = useShortsPreview();
@@ -191,6 +249,19 @@ const ShortsRow = () => {
   );
 };
 
+const RecommendBanner = () => (
+  <div className="container-custom mb-9 lg:mb-12">
+    <Link to="/ne-izlesem" className="promo-card">
+      <span className="promo-icon"><FaMagic /></span>
+      <span className="min-w-0 flex-1">
+        <span className="block text-[15px] font-bold">Ne izleyeceğine karar veremedin mi?</span>
+        <span className="block text-sm text-white/55">Ruh haline, vaktine ve platformlarına göre birkaç saniyede öneri al.</span>
+      </span>
+      <FaArrowRight className="promo-arrow" />
+    </Link>
+  </div>
+);
+
 const TRENDING_WINDOWS = [
   { value: 'day', label: 'Bugün' },
   { value: 'week', label: 'Bu hafta' },
@@ -217,10 +288,7 @@ const Home = () => {
 
   return (
     <>
-      <Helmet>
-        <title>SINEFIX - Film ve Dizi Platformu</title>
-        <meta name="description" content="Popüler filmleri ve dizileri keşfedin, fragmanları izleyin, izleme listenizi oluşturun." />
-      </Helmet>
+      <Seo path="/" jsonLd={[websiteJsonLd(getSiteUrl())]} />
 
       {trendingDay.isLoading ? (
         <HeroSkeleton />
@@ -234,6 +302,7 @@ const Home = () => {
 
       <div className="pt-4 lg:pt-2">
         <ContinueWatchingRow />
+        <NewEpisodesRow />
 
         {state.watchLater.length > 0 && (
           <MediaRow title="İzleme listen" items={state.watchLater} link="/watch-later" showType />
@@ -256,6 +325,7 @@ const Home = () => {
         />
 
         <ShortsRow />
+        <RecommendBanner />
 
         <MediaRow title="Popüler filmler" items={popularMovies.data?.results} loading={popularMovies.isLoading} mediaType="movie" link="/movies" />
         <MediaRow title="Popüler diziler" items={popularSeries.data?.results} loading={popularSeries.isLoading} mediaType="tv" link="/series" />

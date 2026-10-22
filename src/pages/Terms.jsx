@@ -1,13 +1,10 @@
 import React from 'react';
-import { Helmet } from 'react-helmet-async';
+import { StaticSeo } from '../components/Seo';
 
 const Terms = () => {
   return (
     <div className="page container-custom max-w-3xl">
-      <Helmet>
-        <title>Kullanım Koşulları - SINEFIX</title>
-        <meta name="description" content="SINEFIX kullanım koşulları ve şartları. Platformu kullanmadan önce lütfen okuyun." />
-      </Helmet>
+      <StaticSeo path="/kullanim-kosullari" />
 
       <div>
         <div>
