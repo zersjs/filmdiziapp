@@ -9,9 +9,9 @@ const IMAGE_BASE_URL = import.meta.env.VITE_TMDB_IMAGE_BASE_URL || 'https://imag
 
 const tmdbApi = axios.create({
   baseURL: BASE_URL,
+  timeout: 15000,
   headers: {
-    Authorization: `Bearer ${ACCESS_TOKEN}`,
-    'Content-Type': 'application/json;charset=utf-8'
+    Authorization: `Bearer ${ACCESS_TOKEN}`
   },
   params: {
     ...(API_KEY ? { api_key: API_KEY } : {}),
@@ -21,7 +21,6 @@ const tmdbApi = axios.create({
 
 export const getImageUrl = (path, size = 'original') => {
   if (!path) {
-    
     return 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNTAwIiBoZWlnaHQ9Ijc1MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iNTAwIiBoZWlnaHQ9Ijc1MCIgZmlsbD0iIzIxMjEyMSIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iMjQiIGZpbGw9IiM2NjY2NjYiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGR5PSIuM2VtIj5Hw7Zyc2VsIFlvazwvdGV4dD48L3N2Zz4=';
   }
   return `${IMAGE_BASE_URL}/${size}${path}`;
@@ -37,17 +36,22 @@ export const movieService = {
   
   getTopRated: (page = 1) => tmdbApi.get('/movie/top_rated', { params: { page } }),
   
+  getBasic: (id, language) => tmdbApi.get(`/movie/${id}`, { params: { language } }),
+
   getDetail: (id) => tmdbApi.get(`/movie/${id}`, {
     params: {
-      append_to_response: 'credits,videos,images,keywords,reviews,recommendations,similar,external_ids,release_dates'
+      append_to_response: 'credits,videos,recommendations,similar,external_ids,release_dates',
+      include_video_language: 'tr,en,null'
     }
   }),
   
-  getVideos: (id) => tmdbApi.get(`/movie/${id}/videos`),
+  getVideos: (id) => tmdbApi.get(`/movie/${id}/videos`, { params: { include_video_language: 'tr,en,null' } }),
   
   getImages: (id) => tmdbApi.get(`/movie/${id}/images`, { params: { include_image_language: 'tr,en,null' } }),
   
-  getWatchProviders: (id) => tmdbApi.get(`/movie/${id}/watch/providers`)
+  getWatchProviders: (id) => tmdbApi.get(`/movie/${id}/watch/providers`),
+
+  getReviews: (id) => tmdbApi.get(`/movie/${id}/reviews`, { params: { language: 'en-US' } })
 };
 
 export const tvService = {
@@ -60,17 +64,16 @@ export const tvService = {
   
   getTopRated: (page = 1) => tmdbApi.get('/tv/top_rated', { params: { page } }),
   
+  getBasic: (id, language) => tmdbApi.get(`/tv/${id}`, { params: { language } }),
+
   getDetail: (id) => tmdbApi.get(`/tv/${id}`, {
     params: {
-      append_to_response: 'credits,videos,images,keywords,reviews,recommendations,similar,external_ids,content_ratings,aggregate_credits'
+      append_to_response: 'videos,recommendations,similar,external_ids,content_ratings,aggregate_credits',
+      include_video_language: 'tr,en,null'
     }
   }),
   
-  getSeasonDetail: (tvId, seasonNumber) => tmdbApi.get(`/tv/${tvId}/season/${seasonNumber}`, {
-    params: {
-      append_to_response: 'credits,videos,images'
-    }
-  }),
+  getSeasonDetail: (tvId, seasonNumber) => tmdbApi.get(`/tv/${tvId}/season/${seasonNumber}`),
   
   getEpisodeDetail: (tvId, seasonNumber, episodeNumber) => tmdbApi.get(`/tv/${tvId}/season/${seasonNumber}/episode/${episodeNumber}`, {
     params: {
@@ -78,18 +81,23 @@ export const tvService = {
     }
   }),
   
+  getImages: (id) => tmdbApi.get(`/tv/${id}/images`, { params: { include_image_language: 'tr,en,null' } }),
+
   getWatchProviders: (id) => tmdbApi.get(`/tv/${id}/watch/providers`),
   
-  getVideos: (id) => tmdbApi.get(`/tv/${id}/videos`)
+  getVideos: (id) => tmdbApi.get(`/tv/${id}/videos`, { params: { include_video_language: 'tr,en,null' } }),
+
+  getReviews: (id) => tmdbApi.get(`/tv/${id}/reviews`, { params: { language: 'en-US' } })
 };
 
 export const personService = {
+  getBasic: (id, language) => tmdbApi.get(`/person/${id}`, { params: { language } }),
   
   getPopular: (page = 1) => tmdbApi.get('/person/popular', { params: { page } }),
   
   getDetail: (id) => tmdbApi.get(`/person/${id}`, {
     params: {
-      append_to_response: 'movie_credits,tv_credits,images,external_ids,combined_credits'
+      append_to_response: 'combined_credits,external_ids'
     }
   })
 };
@@ -125,7 +133,7 @@ export const genreService = {
 
 export const trendingService = {
   
-  getAll: (timeWindow = 'week') => tmdbApi.get(`/trending/all/${timeWindow}`),
+  getAll: (timeWindow = 'week', page = 1) => tmdbApi.get(`/trending/all/${timeWindow}`, { params: { page } }),
   
   getMovies: (timeWindow = 'week') => tmdbApi.get(`/trending/movie/${timeWindow}`),
   
@@ -166,57 +174,6 @@ export const configurationService = {
   ])
 };
 
-export const mediaService = {
-  
-  getMovieMedia: async (id) => {
-    try {
-      
-      const [trVideos, trImages] = await Promise.all([
-        tmdbApi.get(`/movie/${id}/videos`, { params: { language: 'tr-TR' } }),
-        tmdbApi.get(`/movie/${id}/images`, { params: { include_image_language: 'tr,en,null' } })
-      ]);
-      
-      let finalVideos = trVideos.data.results;
-      if (finalVideos.length === 0) {
-        const enVideos = await tmdbApi.get(`/movie/${id}/videos`, { params: { language: 'en-US' } });
-        finalVideos = enVideos.data.results;
-      }
-      
-      return {
-        videos: { results: finalVideos },
-        images: trImages.data
-      };
-    } catch (error) {
-      console.error('Media service error:', error);
-      return { videos: { results: [] }, images: { backdrops: [], posters: [], logos: [] } };
-    }
-  },
-  
-  getTvMedia: async (id) => {
-    try {
-      
-      const [trVideos, trImages] = await Promise.all([
-        tmdbApi.get(`/tv/${id}/videos`, { params: { language: 'tr-TR' } }),
-        tmdbApi.get(`/tv/${id}/images`, { params: { include_image_language: 'tr,en,null' } })
-      ]);
-      
-      let finalVideos = trVideos.data.results;
-      if (finalVideos.length === 0) {
-        const enVideos = await tmdbApi.get(`/tv/${id}/videos`, { params: { language: 'en-US' } });
-        finalVideos = enVideos.data.results;
-      }
-      
-      return {
-        videos: { results: finalVideos },
-        images: trImages.data
-      };
-    } catch (error) {
-      console.error('Media service error:', error);
-      return { videos: { results: [] }, images: { backdrops: [], posters: [], logos: [] } };
-    }
-  }
-};
-
 export default {
   movieService,
   tvService,
@@ -228,6 +185,5 @@ export default {
   collectionService,
   companyService,
   configurationService,
-  mediaService,
   getImageUrl
 };

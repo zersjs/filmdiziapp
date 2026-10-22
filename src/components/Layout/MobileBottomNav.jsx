@@ -1,43 +1,42 @@
-import React, { useState } from 'react';
-import { NavLink } from 'react-router-dom';
-import { FaHome, FaFilm, FaTv, FaBars, FaPlay } from 'react-icons/fa';
+import React, { useEffect, useState } from 'react';
+import { NavLink, useLocation } from 'react-router-dom';
+import { FaBars } from 'react-icons/fa';
+import { PRIMARY_NAV } from './navigation';
 import MobileMenu from './MobileMenu';
+import { useApp } from '../../contexts';
+
+const LIBRARY_PATHS = ['/favorites', '/watch-later', '/ayarlar', '/search', '/sss', '/iletisim'];
 
 const MobileBottomNav = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const { pathname } = useLocation();
+  const { state } = useApp();
+  const libraryCount = state.watchLater.length;
+  const menuActive = isMenuOpen || LIBRARY_PATHS.some(path => pathname.startsWith(path));
 
-  const navItems = [
-    { path: '/', icon: FaHome, label: 'Ana Sayfa' },
-    { path: '/movies', icon: FaFilm, label: 'Filmler' },
-    { path: '/series', icon: FaTv, label: 'Diziler' },
-    { path: '/sahneler', icon: FaPlay, label: 'Sahneler', special: true },
-  ];
+  useEffect(() => setIsMenuOpen(false), [pathname]);
 
   return (
     <>
-      <div className="mobile-bottom-nav">
-        {navItems.map((item) => (
-          <NavLink
-            key={item.path}
-            to={item.path}
-            className={({ isActive }) => 
-              `mobile-nav-item ${isActive ? 'active' : ''} ${item.special ? 'special-shorts' : ''}`
-            }
-          >
-            <div className={item.special ? 'shorts-icon-wrapper' : ''}>
-              <item.icon />
-            </div>
-            <span className="mobile-nav-label">{item.label}</span>
+      <nav className="bottom-nav" aria-label="Alt menü">
+        {PRIMARY_NAV.map(({ path, icon: Icon, label, end }) => (
+          <NavLink key={path} to={path} end={end} className={({ isActive }) => `bottom-nav-item ${isActive ? 'active' : ''}`}>
+            <Icon />
+            <span className="bottom-nav-label">{label}</span>
           </NavLink>
         ))}
-        <button 
-          className={`mobile-nav-item ${isMenuOpen ? 'active' : ''}`}
+        <button
+          type="button"
+          className={`bottom-nav-item ${menuActive ? 'active' : ''}`}
           onClick={() => setIsMenuOpen(true)}
+          aria-haspopup="dialog"
+          aria-expanded={isMenuOpen}
         >
           <FaBars />
-          <span className="mobile-nav-label">Menü</span>
+          <span className="bottom-nav-label">Menü</span>
+          {libraryCount > 0 && <span className="bottom-nav-dot">{libraryCount > 9 ? '9+' : libraryCount}</span>}
         </button>
-      </div>
+      </nav>
 
       <MobileMenu isOpen={isMenuOpen} onClose={() => setIsMenuOpen(false)} />
     </>

@@ -1,28 +1,16 @@
 import React from 'react';
 import { createRoot } from 'react-dom/client';
 import App from './App';
-import './ui/ui-kit.css';
 import './index.css';
 
-if (import.meta.env.PROD) {
-  console.log = () => {};
-  console.warn = () => {};
-  console.info = () => {};
-}
-
-// Force unregister all service workers if any exist (cleaning up old offline logic)
+// Eski sürümlerden kalan service worker'ları kaldır (offline önbellek eski dosyaları sunmasın).
 if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.getRegistrations().then((registrations) => {
-    for (const registration of registrations) {
-      registration.unregister();
-      console.log('Unregistered SW:', registration.scope);
-    }
-  });
+  navigator.serviceWorker.getRegistrations()
+    .then((registrations) => registrations.forEach((registration) => registration.unregister()))
+    .catch(() => {});
 }
 
-const container = document.getElementById('root');
-const root = createRoot(container);
-root.render(
+createRoot(document.getElementById('root')).render(
   <React.StrictMode>
     <App />
   </React.StrictMode>

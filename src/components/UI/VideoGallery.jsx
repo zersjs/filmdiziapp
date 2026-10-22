@@ -1,89 +1,49 @@
 import React, { useState } from 'react';
-import { LazyLoadImage } from 'react-lazy-load-image-component';
-import { FaYoutube, FaTimes } from 'react-icons/fa';
-import 'react-lazy-load-image-component/src/effects/blur.css';
+import { FaPlay } from 'react-icons/fa';
+import VideoModal from './VideoModal';
 
-const VideoGallery = ({ videos }) => {
-  const [selectedVideo, setSelectedVideo] = useState(null);
-
-  if (!videos || videos.length === 0) return null;
-
-  const openVideoModal = (video) => {
-    setSelectedVideo(video);
-  };
-
-  const closeVideoModal = () => {
-    setSelectedVideo(null);
-  };
-
-  return (
-    <div>
-      <h2 className="text-2xl font-bold mb-4">Videolar</h2>
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-        {videos.map(video => (
-          <VideoCard key={video.id} video={video} onClick={() => openVideoModal(video)} />
-        ))}
-      </div>
-
-      {selectedVideo && (
-        <div 
-          className="fixed inset-0 bg-black/95 z-[10000] flex items-center justify-center p-4"
-          onClick={closeVideoModal}
-        >
-          <div className="relative max-w-4xl w-full" onClick={(e) => e.stopPropagation()}>
-            <button
-              className="absolute -top-12 right-0 text-white/80 hover:text-white text-2xl z-10"
-              onClick={closeVideoModal}
-            >
-              <FaTimes />
-            </button>
-            
-            <div className="relative aspect-video bg-black rounded-lg overflow-hidden">
-              <iframe
-                src={`https://www.youtube.com/embed/${selectedVideo.key}?autoplay=1&rel=0`}
-                title={selectedVideo.name}
-                className="w-full h-full"
-                frameBorder="0"
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                allowFullScreen
-              />
-            </div>
-            
-            <div className="mt-4 text-center">
-              <h3 className="text-lg font-medium text-white">{selectedVideo.name}</h3>
-              <p className="text-sm text-gray-400 mt-1">{selectedVideo.type}</p>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
-  );
+const TYPE_LABELS = {
+  Trailer: 'Fragman',
+  Teaser: 'Teaser',
+  Clip: 'Klip',
+  Featurette: 'Kamera arkası',
+  'Behind the Scenes': 'Kamera arkası',
+  Bloopers: 'Bloopers',
+  'Opening Credits': 'Jenerik',
 };
 
-const VideoCard = ({ video, onClick }) => {
+const VideoGallery = ({ videos }) => {
+  const [selected, setSelected] = useState(null);
+  const youtube = (videos || []).filter(v => v.site === 'YouTube');
+
+  if (youtube.length === 0) return null;
+
   return (
-    <div className="relative overflow-hidden rounded-lg bg-black mb-2">
-      <div
-        onClick={onClick}
-        className="group block cursor-pointer"
-      >
-        <LazyLoadImage
-          src={`https://img.youtube.com/vi/${video.key}/hqdefault.jpg`}
-          alt={video.name}
-          effect="blur"
-          className="w-full h-48 object-cover transition-transform duration-300 group-hover:scale-110"
-        />
-        <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent opacity-0 group-hover:opacity-90 transition-opacity flex items-center justify-center">
-          <FaYoutube className="text-red-500 text-4xl" />
-        </div>
+    <section>
+      <h2 className="section-title mb-4">Videolar <span className="text-sm font-medium text-white/40">({youtube.length})</span></h2>
+      <div className="grid grid-cols-1 gap-x-4 gap-y-6 xs:grid-cols-2 lg:grid-cols-3">
+        {youtube.map(video => (
+          <button key={video.id} type="button" onClick={() => setSelected(video)} className="group text-left">
+            <div className="relative aspect-video overflow-hidden rounded-xl bg-[#111]">
+              <img
+                src={`https://i.ytimg.com/vi/${video.key}/hqdefault.jpg`}
+                alt=""
+                loading="lazy"
+                className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+              />
+              <div className="absolute inset-0 flex items-center justify-center bg-black/25 transition-colors group-hover:bg-black/10">
+                <span className="flex h-12 w-12 items-center justify-center rounded-full bg-white pl-1 text-sm text-black shadow-lg">
+                  <FaPlay />
+                </span>
+              </div>
+            </div>
+            <p className="mt-2 line-clamp-1 text-sm font-semibold text-white/90">{video.name}</p>
+            <p className="text-xs text-white/40">{TYPE_LABELS[video.type] || video.type}</p>
+          </button>
+        ))}
       </div>
-      <div className="mt-2">
-        <h3 className="font-medium text-sm line-clamp-1 group-hover:text-gray-400 transition-colors">
-          {video.name}
-        </h3>
-        <p className="text-xs text-gray-400 mt-1">{video.type}</p>
-      </div>
-    </div>
+      <VideoModal video={selected} onClose={() => setSelected(null)} />
+    </section>
   );
 };
 

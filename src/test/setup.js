@@ -1,6 +1,7 @@
 import '@testing-library/jest-dom';
 import { vi } from 'vitest';
 
+if (typeof window !== 'undefined') {
 global.IntersectionObserver = class IntersectionObserver {
   constructor() {}
   disconnect() {}
@@ -22,10 +23,16 @@ Object.defineProperty(window, 'matchMedia', {
   })),
 });
 
-const localStorageMock = {
-  getItem: vi.fn(),
-  setItem: vi.fn(),
-  removeItem: vi.fn(),
-  clear: vi.fn(),
+// Bellek içi localStorage: testler gerçek okuma/yazma davranışını doğrulayabilsin.
+const createStorage = () => {
+  let store = new Map();
+  return {
+    getItem: vi.fn(key => (store.has(key) ? store.get(key) : null)),
+    setItem: vi.fn((key, value) => { store.set(key, String(value)); }),
+    removeItem: vi.fn(key => { store.delete(key); }),
+    clear: vi.fn(() => { store = new Map(); }),
+  };
 };
-global.localStorage = localStorageMock;
+
+Object.defineProperty(window, 'localStorage', { configurable: true, value: createStorage() });
+}

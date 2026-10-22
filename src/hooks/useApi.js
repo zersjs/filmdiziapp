@@ -36,7 +36,8 @@ export const useApi = (apiFunction, dependencies = [], options = {}) => {
 
   useEffect(() => {
     if (immediate && dependencies.every(dep => dep !== undefined)) {
-      execute(...dependencies);
+      // Hata state'e yazıldı; otomatik çağrıda reddedilen promise'i yakala.
+      execute(...dependencies).catch(() => {});
     }
   }, dependencies);
 

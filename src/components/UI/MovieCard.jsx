@@ -1,99 +1,119 @@
-import React, { useState } from 'react';
+import React, { memo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { LazyLoadImage } from 'react-lazy-load-image-component';
-import { FaStar, FaHeart, FaFilm, FaTv, FaPlay } from 'react-icons/fa';
+import { FaStar, FaHeart, FaFilm, FaTv, FaPlay, FaPlus, FaCheck } from 'react-icons/fa';
 import { getImageUrl } from '../../services/tmdb';
-import { formatRating, getYear, createSlug } from '../../utils/helpers';
+import { getDetailPath, getMediaLabel, getMediaType, getReleaseDate, getTitle, getWatchPath, getYear } from '../../utils/helpers';
 import { useApp } from '../../contexts';
 import { useToast } from './Toast';
-import 'react-lazy-load-image-component/src/effects/blur.css';
 
-const MovieCard = ({ item, mediaType = 'movie' }) => {
+export const PosterImage = ({ path, alt, className = '', sizes = '(min-width: 1024px) 190px, (min-width: 640px) 25vw, 45vw' }) => {
+  const [loaded, setLoaded] = useState(false);
+  const [failed, setFailed] = useState(false);
+
+  if (!path || failed) return null;
+
+  return (
+    <img
+      src={getImageUrl(path, 'w342')}
+      srcSet={`${getImageUrl(path, 'w185')} 185w, ${getImageUrl(path, 'w342')} 342w, ${getImageUrl(path, 'w500')} 500w`}
+      sizes={sizes}
+      alt={alt}
+      loading="lazy"
+      decoding="async"
+      className={`mc-img ${loaded ? 'loaded' : ''} ${className}`}
+      onLoad={() => setLoaded(true)}
+      onError={() => setFailed(true)}
+    />
+  );
+};
+
+const MovieCard = ({ item, mediaType, showType = false, showActions = true }) => {
   const { actions } = useApp();
   const { toast } = useToast();
   const navigate = useNavigate();
-  const [imageError, setImageError] = useState(false);
 
-  const isFavorite = actions.isFavorite(item.id, mediaType);
+  const type = getMediaType(item, mediaType);
+  const title = getTitle(item);
+  const year = getYear(getReleaseDate(item));
+  const rating = item.vote_average > 0 ? item.vote_average.toFixed(1) : null;
+  const isFavorite = actions.isFavorite(item.id, type);
+  const inWatchLater = actions.isWatchLater(item.id, type);
 
-  const toggleFavorite = (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    
-    try {
-      actions.toggleFavorite({ ...item, media_type: mediaType });
-      toast.success(isFavorite ? 'Favorilerden kaldırıldı' : 'Favorilere eklendi');
-    } catch (error) {
-      toast.error('Favori işlemi sırasında hata oluştu');
-    }
+  const stop = (event) => {
+    event.preventDefault();
+    event.stopPropagation();
   };
 
-  const handleWatch = (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    navigate(`/watch/${mediaType}/${item.id}/${slug}`);
+  const onFavorite = (event) => {
+    stop(event);
+    const added = actions.toggleFavorite(item, type);
+    toast.success(added ? 'Favorilere eklendi' : 'Favorilerden çıkarıldı', 2000);
   };
 
-  const title = item.title || item.name;
-  const releaseDate = item.release_date || item.first_air_date;
-  const slug = createSlug(title);
-  const detailPath = `/${mediaType}/${item.id}/${slug}`;
-  const posterUrl = item.poster_path ? getImageUrl(item.poster_path, 'w342') : null;
-  const rating = formatRating(item.vote_average);
-  const year = getYear(releaseDate);
+  const onWatchLater = (event) => {
+    stop(event);
+    const added = actions.toggleWatchLater(item, type);
+    toast.success(added ? 'İzleme listene eklendi' : 'İzleme listenden çıkarıldı', 2000);
+  };
+
+  const onPlay = (event) => {
+    stop(event);
+    navigate(getWatchPath(item, type));
+  };
 
   return (
-    <Link to={detailPath} className="sf-movie-card group">
-      <div className="sf-movie-card-poster">
-        {posterUrl && !imageError ? (
-          <LazyLoadImage
-            src={posterUrl}
-            alt={title}
-            effect="opacity"
-            className="sf-movie-card-img"
-            onError={() => setImageError(true)}
-            loading="lazy"
-          />
-        ) : (
-          <div className="sf-movie-card-placeholder">
-            {mediaType === 'movie' ? <FaFilm /> : <FaTv />}
-            <span>{title}</span>
-          </div>
-        )}
+    <Link to={getDetailPath(item, type)} className="mc" aria-label={`${title}${year ? ` (${year})` : ''}`}>
+      <div className="mc-poster">
+        <div className="mc-placeholder" aria-hidden="true">
+          {type === 'tv' ? <FaTv /> : <FaFilm />}
+          <span className="line-clamp-3">{title}</span>
+        </div>
+        <PosterImage path={item.poster_path} alt="" />
+        <div className="mc-shade" />
 
-        <div className="sf-movie-card-overlay">
-          <div className="sf-movie-card-actions">
-            <button className="sf-movie-card-play" onClick={handleWatch}>
-              <FaPlay />
+        {showType && <span className="mc-type">{getMediaLabel(type)}</span>}
+
+        <span className="mc-play" aria-hidden="true" onClick={onPlay}>
+          <FaPlay />
+        </span>
+
+        {showActions && (
+          <div className="mc-actions">
+            <button
+              type="button"
+              onClick={onFavorite}
+              className={`mc-action fav ${isFavorite ? 'on' : ''}`}
+              aria-label={isFavorite ? 'Favorilerden çıkar' : 'Favorilere ekle'}
+              aria-pressed={isFavorite}
+            >
+              <FaHeart />
             </button>
-          </div>
-        </div>
-
-        <div className="sf-movie-card-type-badge">
-          {mediaType === 'movie' ? 'Film' : 'Dizi'}
-        </div>
-
-        <button
-          onClick={toggleFavorite}
-          className={`sf-movie-card-fav ${isFavorite ? 'active' : ''}`}
-        >
-          <FaHeart />
-        </button>
-
-        {rating > 0 && (
-          <div className="sf-movie-card-rating">
-            <FaStar />
-            <span>{rating}</span>
+            <button
+              type="button"
+              onClick={onWatchLater}
+              className={`mc-action ${inWatchLater ? 'on' : ''}`}
+              aria-label={inWatchLater ? 'İzleme listesinden çıkar' : 'İzleme listesine ekle'}
+              aria-pressed={inWatchLater}
+            >
+              {inWatchLater ? <FaCheck /> : <FaPlus />}
+            </button>
           </div>
         )}
       </div>
 
-      <div className="sf-movie-card-info">
-        <h3 className="sf-movie-card-title">{title}</h3>
-        <span className="sf-movie-card-year">{year}</span>
+      <div className="mc-info">
+        <h3 className="mc-title line-clamp-1">{title}</h3>
+        <div className="mc-meta">
+          {year && <span>{year}</span>}
+          {rating && (
+            <span className="rating">
+              <FaStar /> {rating}
+            </span>
+          )}
+        </div>
       </div>
     </Link>
   );
 };
 
-export default MovieCard;
+export default memo(MovieCard);

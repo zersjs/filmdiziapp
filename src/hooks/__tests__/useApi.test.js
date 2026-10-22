@@ -1,4 +1,4 @@
-import { renderHook, waitFor } from '@testing-library/react';
+import { act, renderHook, waitFor } from '@testing-library/react';
 import { describe, test, expect, beforeEach, vi } from 'vitest';
 import { useApi } from '../useApi';
 
@@ -59,14 +59,17 @@ describe('useApi', () => {
       useApi(mockApiSuccess, [], { immediate: false })
     );
 
-    result.current.execute();
+    let pending;
+    act(() => {
+      pending = result.current.execute();
+    });
 
     expect(result.current.loading).toBe(true);
     expect(mockApiSuccess).toHaveBeenCalledTimes(1);
 
-    await waitFor(() => {
-      expect(result.current.loading).toBe(false);
-    });
+    await act(() => pending);
+
+    expect(result.current.loading).toBe(false);
 
     expect(result.current.data).toEqual({ results: ['test'] });
   });

@@ -1,102 +1,66 @@
 import React, { useState } from 'react';
 import { FaStar, FaUser } from 'react-icons/fa';
-import { formatDate, truncateText } from '../../utils/helpers';
+import { formatDate } from '../../utils/helpers';
+import { EmptyState } from './States';
+
+const avatarUrl = (path) => {
+  if (!path) return null;
+  if (path.startsWith('/http')) return path.substring(1);
+  return `https://image.tmdb.org/t/p/w185${path}`;
+};
+
+const ReviewCard = ({ review }) => {
+  const [expanded, setExpanded] = useState(false);
+  const [avatarFailed, setAvatarFailed] = useState(false);
+  const avatar = avatarUrl(review.author_details?.avatar_path);
+  const rating = review.author_details?.rating;
+  const isLong = review.content.length > 480;
+
+  return (
+    <article className="surface p-4 sm:p-6">
+      <header className="flex items-center gap-3">
+        <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center overflow-hidden rounded-full bg-white/5 text-white/30">
+          {avatar && !avatarFailed ? (
+            <img src={avatar} alt="" className="h-full w-full object-cover" onError={() => setAvatarFailed(true)} />
+          ) : (
+            <FaUser />
+          )}
+        </div>
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-sm font-semibold">{review.author}</p>
+          <p className="text-xs text-white/40">{formatDate(review.created_at)}</p>
+        </div>
+        {rating ? (
+          <span className="badge text-[var(--star)]">
+            <FaStar className="text-[10px]" /> {rating}/10
+          </span>
+        ) : null}
+      </header>
+      <p className={`mt-4 whitespace-pre-line text-sm leading-relaxed text-white/70 ${!expanded && isLong ? 'line-clamp-6' : ''}`}>
+        {review.content}
+      </p>
+      {isLong && (
+        <button type="button" onClick={() => setExpanded(v => !v)} className="mt-2 text-sm font-semibold text-white hover:underline">
+          {expanded ? 'Daha az göster' : 'Devamını oku'}
+        </button>
+      )}
+    </article>
+  );
+};
 
 const Reviews = ({ reviews }) => {
-  const [expandedReviews, setExpandedReviews] = useState({});
-
-  const toggleReview = (reviewId) => {
-    setExpandedReviews(prev => ({
-      ...prev,
-      [reviewId]: !prev[reviewId]
-    }));
-  };
-
   if (!reviews || reviews.length === 0) {
     return (
-      <div className="text-center py-12">
-        <p className="text-gray-400">Henüz yorum yapılmamış.</p>
-      </div>
+      <EmptyState
+        title="Henüz inceleme yok"
+        description="Bu içerik için TMDB'de yazılmış bir inceleme bulunmuyor."
+      />
     );
   }
 
   return (
-    <div className="max-w-4xl">
-      <h2 className="text-2xl font-bold mb-6">Kullanıcı Yorumları</h2>
-      <div className="space-y-6">
-        {reviews.map(review => (
-          <ReviewCard 
-            key={review.id} 
-            review={review}
-            isExpanded={expandedReviews[review.id]}
-            onToggle={() => toggleReview(review.id)}
-          />
-        ))}
-      </div>
-    </div>
-  );
-};
-
-const ReviewCard = ({ review, isExpanded, onToggle }) => {
-  const avatarUrl = review.author_details?.avatar_path
-    ? review.author_details.avatar_path.startsWith('/https')
-      ? review.author_details.avatar_path.substring(1)
-      : `https://image.tmdb.org/t/p/w185${review.author_details.avatar_path}`
-    : null;
-
-  const shouldTruncate = review.content.length > 400;
-  const displayContent = isExpanded ? review.content : truncateText(review.content, 400);
-
-  return (
-    <div className="bg-gray-900 rounded-lg p-6">
-      <div className="flex items-start space-x-4">
-        <div className="flex-shrink-0">
-          {avatarUrl ? (
-            <img
-              src={avatarUrl}
-              alt={review.author}
-              className="w-12 h-12 rounded-full object-cover"
-            />
-          ) : (
-            <div className="w-12 h-12 bg-gray-800 rounded-full flex items-center justify-center">
-              <FaUser className="text-gray-600" />
-            </div>
-          )}
-        </div>
-
-        <div className="flex-grow">
-          <div className="flex items-center justify-between mb-2">
-            <div>
-              <h4 className="font-semibold">{review.author}</h4>
-              <p className="text-sm text-gray-400">
-                {formatDate(review.created_at)}
-              </p>
-            </div>
-            
-            {review.author_details?.rating && (
-              <div className="flex items-center space-x-1 bg-gray-800 px-3 py-1 rounded-full">
-                <FaStar className="text-yellow-500 text-sm" />
-                <span className="text-sm font-medium">
-                  {review.author_details.rating}/10
-                </span>
-              </div>
-            )}
-          </div>
-
-          <div className="text-gray-300 leading-relaxed">
-            <p className="whitespace-pre-wrap">{displayContent}</p>
-            
-            {shouldTruncate && (
-              <button
-                onClick={onToggle}
-                className="text-blue-400 hover:text-blue-300 text-sm mt-2"
-              >
-                {isExpanded ? 'Daha az göster' : 'Devamını oku'}
-              </button>
-            )}
-          </div>
-        </div>
-      </div>
+    <div className="max-w-3xl space-y-4">
+      {reviews.map(review => <ReviewCard key={review.id} review={review} />)}
     </div>
   );
 };

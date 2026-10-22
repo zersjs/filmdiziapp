@@ -1,2 +1,1 @@
-
-export { AppProvider, useApp, ActionTypes } from './AppContext.jsx';
+export { AppProvider, useApp } from './AppContext.jsx';

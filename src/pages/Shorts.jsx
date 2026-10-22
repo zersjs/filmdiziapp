@@ -1,768 +1,391 @@
-import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Link, useParams } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
-import { FaPlay, FaPause, FaVolumeUp, FaVolumeMute, FaHeart, FaRegHeart, FaBookmark, FaRegBookmark, FaShare, FaFilm, FaTv, FaExclamationTriangle, FaComment } from 'react-icons/fa';
-import { useShorts } from '../hooks/useShorts';
-import { shortsService } from '../services/shorts';
-import { getImageUrl } from '../services/tmdb';
-import { useAuth } from '../contexts/AuthContext';
-import { likesService, bookmarksService, commentsService } from '../services/supabase';
-import { triggerHaptic, HapticType } from '../utils/haptic';
-import CommentsModal from '../components/UI/CommentsModal';
+import {
+  FaChevronUp, FaChevronDown, FaExpand, FaCompress, FaForward, FaVolumeMute, FaRedo, FaExclamationTriangle,
+} from 'react-icons/fa';
+import ShortSlide from '../components/Shorts/ShortSlide';
+import { useShortsFeed } from '../hooks/useShortsFeed';
+import { useGenres } from '../hooks';
+import { useApp } from '../contexts';
+import { useToast } from '../components/UI/Toast';
+import { Spinner } from '../components/UI/Loading';
+import { blockedTrailers, createShortSlug, seenShorts, shortKey } from '../services/shorts';
+import { getTitle, shareOrCopy } from '../utils/helpers';
 
+const SEEN_AFTER_MS = 3000;
+const SKIP_UNPLAYABLE_MS = 1500;
 
-const ShortsCard = React.memo(({ short, isActive, isNext, isMuted, onToggleMute, user, onOpenComments }) => {
-  const navigate = useNavigate();
-  const [isLiked, setIsLiked] = useState(false);
-  const [isSaved, setIsSaved] = useState(false);
-  const [isPlaying, setIsPlaying] = useState(true);
-  const [isLoaded, setIsLoaded] = useState(false);
-  const [hasError, setHasError] = useState(false);
-  const [showPlayPause, setShowPlayPause] = useState(false);
-  const [likeLoading, setLikeLoading] = useState(false);
-  const [saveLoading, setSaveLoading] = useState(false);
-  const [commentCount, setCommentCount] = useState(0);
-  const iframeRef = useRef(null);
-  const playPauseTimer = useRef(null);
-  const loadTimeoutRef = useRef(null);
-  const retryCountRef = useRef(0);
+const readFlag = (storage, key, fallback) => {
+  try {
+    const value = window[storage].getItem(key);
+    return value === null ? fallback : value === '1';
+  } catch {
+    return fallback;
+  }
+};
 
-  const title = short.title || short.name;
-  const year = (short.release_date || short.first_air_date || '').split('-')[0];
-  const rating = short.vote_average?.toFixed(1);
+const writeFlag = (storage, key, value) => {
+  try {
+    window[storage].setItem(key, value ? '1' : '0');
+  } catch {
+    // tercih kaydedilemezse sorun değil
+  }
+};
 
-  // Mobil için autoplay ve muted ile başla
-  const embedUrl = useMemo(() => {
-    if (!short?.trailer?.key) return null;
-    return shortsService.getYouTubeEmbedUrl(short.trailer.key, {
-      autoplay: 1, // Her zaman autoplay
-      mute: isMuted ? 1 : 0,
-      start: 10, // Biraz daha erken başlat
-      controls: 0,
-      playsinline: 1 // Mobil için kritik
-    });
-  }, [short?.trailer?.key, isMuted]);
+// Veri tasarrufu veya azaltılmış hareket tercih edildiyse videolar kendiliğinden başlamaz.
+const prefersManualStart = () => {
+  try {
+    return !!navigator.connection?.saveData || window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  } catch {
+    return false;
+  }
+};
 
-  const posterUrl = getImageUrl(short.poster_path, 'w342');
-  const thumbnailUrl = shortsService.getThumbnailUrl(short.trailer.key);
+// Fareyle tıklanan butondan odağı al; aksi halde Space kısayolu butonu yeniden tetikler.
+// Klavyeyle basıldığında (detail === 0) odak korunur.
+const releaseMouseFocus = (event) => {
+  if (event.detail > 0) event.currentTarget.blur();
+};
 
-  // Cleanup function
-  useEffect(() => {
-    return () => {
-      if (playPauseTimer.current) clearTimeout(playPauseTimer.current);
-      if (loadTimeoutRef.current) clearTimeout(loadTimeoutRef.current);
-    };
-  }, []);
-
-  const sendCommand = useCallback((command) => {
-    if (iframeRef.current?.contentWindow) {
-      try {
-        iframeRef.current.contentWindow.postMessage(
-          JSON.stringify({ event: 'command', func: command, args: '' }),
-          '*'
-        );
-      } catch (e) {
-        console.warn('YouTube command error:', e);
-      }
-    }
-  }, []);
-
-  const togglePlayPause = useCallback((e) => {
-    e?.stopPropagation();
-    
-    sendCommand(isPlaying ? 'pauseVideo' : 'playVideo');
-    setIsPlaying(prev => !prev);
-    setShowPlayPause(true);
-    
-    if (playPauseTimer.current) clearTimeout(playPauseTimer.current);
-    playPauseTimer.current = setTimeout(() => setShowPlayPause(false), 600);
-  }, [isPlaying, sendCommand]);
-
-  // Active/Next video management
-  useEffect(() => {
-    if (!isLoaded) return;
-
-    if (isActive) {
-      setIsPlaying(true);
-      sendCommand('playVideo');
-      sendCommand(isMuted ? 'mute' : 'unMute');
-    } else {
-      sendCommand('pauseVideo');
-      setIsPlaying(false);
-    }
-  }, [isActive, isLoaded, isMuted, sendCommand]);
-
-  // Video load timeout handler
-  useEffect(() => {
-    if ((isActive || isNext) && !isLoaded && !hasError) {
-      loadTimeoutRef.current = setTimeout(() => {
-        if (!isLoaded && retryCountRef.current < 2) {
-          retryCountRef.current += 1;
-          setIsLoaded(false);
-          // Force iframe reload
-          if (iframeRef.current) {
-            const src = iframeRef.current.src;
-            iframeRef.current.src = '';
-            setTimeout(() => {
-              if (iframeRef.current) iframeRef.current.src = src;
-            }, 100);
-          }
-        } else if (retryCountRef.current >= 2) {
-          setHasError(true);
-        }
-      }, 8000); // 8 saniye timeout
-    }
-
-    return () => {
-      if (loadTimeoutRef.current) clearTimeout(loadTimeoutRef.current);
-    };
-  }, [isActive, isNext, isLoaded, hasError]);
-
-  const handleIframeLoad = useCallback(() => {
-    setIsLoaded(true);
-    setHasError(false);
-    retryCountRef.current = 0;
-    if (loadTimeoutRef.current) clearTimeout(loadTimeoutRef.current);
-    
-    // Mobil için hemen oynat
-    if (isActive) {
-      setTimeout(() => {
-        sendCommand('playVideo');
-        sendCommand(isMuted ? 'mute' : 'unMute');
-      }, 300);
-    }
-  }, [isActive, isMuted, sendCommand]);
-
-  // User status check + comment count
-  useEffect(() => {
-    const checkStatus = async () => {
-      // Yorum sayısını her zaman yükle
-      const count = await commentsService.getCommentCount(short.id, short.media_type);
-      setCommentCount(count);
-
-      if (user?.id) {
-        try {
-          const [liked, saved] = await Promise.all([
-            likesService.isLiked(user.id, short.id, short.media_type),
-            bookmarksService.isBookmarked(user.id, short.id, short.media_type)
-          ]);
-          setIsLiked(liked);
-          setIsSaved(saved);
-        } catch (e) {
-          console.warn('Status check error:', e);
-        }
-      }
-    };
-    if (isActive) checkStatus();
-  }, [user?.id, short.id, short.media_type, isActive]);
-
-  const handleLike = async (e) => {
-    e.stopPropagation();
-    triggerHaptic(HapticType.MEDIUM, e.currentTarget);
-    if (!user) {
-      navigate('/login');
-      return;
-    }
-    if (likeLoading) return;
-    
-    setLikeLoading(true);
-    try {
-      const { liked } = await likesService.toggleLike(user.id, short.id, short.media_type);
-      setIsLiked(liked);
-      triggerHaptic(liked ? HapticType.SUCCESS : HapticType.LIGHT);
-    } catch (e) {
-      console.error('Like error:', e);
-      triggerHaptic(HapticType.ERROR);
-    }
-    setLikeLoading(false);
-  };
-
-  const handleSave = async (e) => {
-    e.stopPropagation();
-    triggerHaptic(HapticType.MEDIUM, e.currentTarget);
-    if (!user) {
-      navigate('/login');
-      return;
-    }
-    if (saveLoading) return;
-    
-    setSaveLoading(true);
-    try {
-      const { bookmarked } = await bookmarksService.toggleBookmark(
-        user.id, short.id, short.media_type, title, short.poster_path
-      );
-      setIsSaved(bookmarked);
-      triggerHaptic(bookmarked ? HapticType.SUCCESS : HapticType.LIGHT);
-    } catch (e) {
-      console.error('Save error:', e);
-      triggerHaptic(HapticType.ERROR);
-    }
-    setSaveLoading(false);
-  };
-
-  const handleWatch = (e) => {
-    e.stopPropagation();
-    triggerHaptic(HapticType.HEAVY, e.currentTarget);
-    navigate(`/watch/${short.media_type}/${short.id}`);
-  };
-
-  const handleDetails = (e) => {
-    e.stopPropagation();
-    navigate(`/${short.media_type}/${short.id}`);
-  };
-
-  const handleShare = (e) => {
-    e.stopPropagation();
-    triggerHaptic(HapticType.LIGHT, e.currentTarget);
-    if (navigator.share) {
-      navigator.share({
-        title,
-        url: `${window.location.origin}/${short.media_type}/${short.id}`
-      }).then(() => triggerHaptic(HapticType.SUCCESS)).catch(() => {});
-    } else {
-      navigator.clipboard?.writeText(`${window.location.origin}/${short.media_type}/${short.id}`);
-      triggerHaptic(HapticType.SUCCESS);
-    }
-  };
-
-  const handleRetry = (e) => {
-    e.stopPropagation();
-    setHasError(false);
-    setIsLoaded(false);
-    retryCountRef.current = 0;
-  };
-
-  // Render nothing if no trailer
-  if (!short?.trailer?.key) return null;
-
-  return (
-    <div className="reels-card">
-      <div 
-        className="reels-bg-blur" 
-        style={{ backgroundImage: `url(${thumbnailUrl})` }}
-      />
-      
-      {(isActive || isNext) && !hasError ? (
-        <>
-          <div className={`reels-iframe-wrapper ${isLoaded ? 'loaded' : ''}`} onClick={togglePlayPause}>
-            <iframe
-              ref={iframeRef}
-              src={embedUrl}
-              className="reels-iframe"
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-              allowFullScreen
-              title={title}
-              onLoad={handleIframeLoad}
-              loading={isActive ? 'eager' : 'lazy'}
-            />
-          </div>
-          <div className="reels-iframe-mask" onClick={togglePlayPause} />
-          
-          {!isLoaded && (
-            <div className="reels-thumbnail absolute inset-0 z-10">
-              <img src={thumbnailUrl} alt={title} onError={(e) => { e.target.src = posterUrl; }} />
-            </div>
-          )}
-
-          <div className={`reels-play-pause-overlay ${showPlayPause ? 'visible' : ''}`}>
-            {isPlaying ? <FaPause /> : <FaPlay />}
-          </div>
-        </>
-      ) : hasError ? (
-        <div className="reels-error-state" onClick={handleRetry}>
-          <FaExclamationTriangle className="text-4xl text-yellow-500 mb-3" />
-          <p className="text-sm text-gray-400 mb-3">Video yüklenemedi</p>
-          <button className="reels-retry-btn">Tekrar Dene</button>
-        </div>
-      ) : (
-        <div className="reels-thumbnail">
-          <img src={thumbnailUrl} alt={title} onError={(e) => { e.target.src = posterUrl; }} />
-          <div className="reels-play-overlay">
-            <FaPlay />
-          </div>
-        </div>
-      )}
-
-      <div className="reels-overlay-minimal" />
-
-      <div className="reels-content">
-        <div className="reels-info">
-          <div className="reels-creator">
-            <div className="reels-poster-small" onClick={handleDetails}>
-              <img src={posterUrl} alt={title} />
-            </div>
-            <div className="reels-creator-info">
-              <h3 className="reels-title" onClick={handleDetails}>{title}</h3>
-              <div className="reels-meta">
-                <span className="reels-badge-inline">
-                  {short.media_type === 'movie' ? <><FaFilm /> Film</> : <><FaTv /> Dizi</>}
-                </span>
-                <span className="reels-separator">•</span>
-                <span className="reels-rating">★ {rating}</span>
-                <span className="reels-separator">•</span>
-                <span>{year}</span>
-              </div>
-            </div>
-          </div>
-          
-          {short.overview && (
-            <p className="reels-description">
-              {short.overview.length > 120 ? `${short.overview.substring(0, 120)}...` : short.overview}
-            </p>
-          )}
-
-          {short.genres?.length > 0 && (
-            <div className="reels-tags">
-              {short.genres.slice(0, 3).map(genre => (
-                <span key={genre.id} className="reels-tag">#{genre.name.replace(/\s+/g, '')}</span>
-              ))}
-            </div>
-          )}
-
-          <button className="reels-watch-btn" onClick={handleWatch}>
-            <FaPlay /> Hemen İzle
-          </button>
-        </div>
-
-        <div className="reels-actions">
-          <button
-            className={`reels-action ${isLiked ? 'active' : ''} ${likeLoading ? 'loading' : ''}`}
-            onClick={handleLike}
-          >
-            {isLiked ? <FaHeart /> : <FaRegHeart />}
-          </button>
-          <button
-            className="reels-action comment-btn"
-            onClick={(e) => { e.stopPropagation(); onOpenComments(short, title); }}
-          >
-            <FaComment />
-            {commentCount > 0 && <span className="reels-action-count">{commentCount}</span>}
-          </button>
-          <button
-            className={`reels-action ${isSaved ? 'active' : ''} ${saveLoading ? 'loading' : ''}`}
-            onClick={handleSave}
-          >
-            {isSaved ? <FaBookmark /> : <FaRegBookmark />}
-          </button>
-          <button className="reels-action" onClick={handleShare}>
-            <FaShare />
-          </button>
-          <button
-            className="reels-action sound-btn"
-            onClick={(e) => { e.stopPropagation(); onToggleMute(); }}
-          >
-            {isMuted ? <FaVolumeMute /> : <FaVolumeUp />}
-          </button>
-        </div>
-      </div>
-
-      {/* Progress indicator - her video için sıfırdan başlar */}
-      {isActive && isLoaded && (
-        <div className="reels-progress-container">
-          <div 
-            key={`progress-${short.id}-${short.media_type}`} 
-            className="reels-progress-bar" 
-          />
-        </div>
-      )}
-    </div>
-  );
-});
+const StatusSlide = ({ children, loading = false }) => (
+  <section className={`short-slide short-slide-status ${loading ? 'loading' : ''}`}>
+    <div className="flex max-w-xs flex-col items-center gap-3 text-center">{children}</div>
+  </section>
+);
 
 const Shorts = () => {
   const { slug } = useParams();
-  const navigate = useNavigate();
-  
-  const {
-    shorts,
-    isReady,
-    currentIndex,
-    goToNext,
-    goToPrevious,
-    goToIndex,
-    isMuted,
-    toggleMute,
-    prependShort,
-    hasContent,
-    cleanupOldItems
-  } = useShorts();
+  const { items, status, notice, dismissNotice, ensureAhead, retry } = useShortsFeed(slug);
+  const { actions } = useApp();
+  const { toast } = useToast();
+  const { data: movieGenres = [] } = useGenres('movie');
+  const { data: tvGenres = [] } = useGenres('tv');
+  const genreMap = useMemo(() => new Map([...movieGenres, ...tvGenres].map(g => [g.id, g.name])), [movieGenres, tvGenres]);
 
-  const { user } = useAuth();
+  const scrollerRef = useRef(null);
+  const [active, setActive] = useState(0);
+  const [userPaused, setUserPaused] = useState(false);
+  const [pageHidden, setPageHidden] = useState(false);
+  const [muted, setMuted] = useState(() => readFlag('sessionStorage', 'shortsMuted', true));
+  const [fill, setFill] = useState(() => readFlag('localStorage', 'shortsFill', false));
+  const [autoNext, setAutoNext] = useState(() => readFlag('localStorage', 'shortsAutoNext', true));
+  const [manualStart] = useState(prefersManualStart);
+  const [started, setStarted] = useState(false);
+  const [soundHint, setSoundHint] = useState(() => (readFlag('sessionStorage', 'shortsMuted', true) ? 'initial' : null));
+  const [apiFailed, setApiFailed] = useState(false);
+  const [swipeHint, setSwipeHint] = useState(() => !readFlag('localStorage', 'shortsSwipeHintSeen', false));
 
-  // Yorum modalı state
-  const [commentsModal, setCommentsModal] = useState({
-    isOpen: false,
-    short: null,
-    title: ''
-  });
+  const itemsRef = useRef(items);
+  itemsRef.current = items;
+  const activeRef = useRef(active);
+  activeRef.current = active;
+  const autoNextRef = useRef(autoNext);
+  autoNextRef.current = autoNext;
 
-  // Native swipe state
-  const [dragOffset, setDragOffset] = useState(0);
-  const [isDragging, setIsDragging] = useState(false);
-  const [swipeDirection, setSwipeDirection] = useState(null);
+  const activeItem = items[active];
+  const activeKey = activeItem ? shortKey(activeItem) : null;
 
-  const containerRef = useRef(null);
-  const touchStartRef = useRef({ y: 0, x: 0, time: 0 });
-  const lastScrollTime = useRef(0);
-  const initialSlugProcessed = useRef(false);
-  const isTransitioning = useRef(false);
-  const velocityRef = useRef(0);
-  const lastTouchY = useRef(0);
-  const animationFrameRef = useRef(null);
+  // ---------- Gezinme ----------
 
-  const openCommentsModal = useCallback((short, title) => {
-    setCommentsModal({ isOpen: true, short, title });
-  }, []);
+  // Sondaki durum sahnesine (bitti / hata) yalnızca yükleme bittiyse gidilebilir.
+  const terminalRef = useRef(false);
+  terminalRef.current = !['loading', 'ready'].includes(status);
 
-  const closeCommentsModal = useCallback(() => {
-    setCommentsModal({ isOpen: false, short: null, title: '' });
-  }, []);
+  const go = useCallback((index) => {
+    const el = scrollerRef.current;
+    if (!el) return;
+    const last = itemsRef.current.length - (terminalRef.current ? 0 : 1);
+    const target = Math.max(0, Math.min(index, last));
+    el.scrollTo({ top: target * el.clientHeight, behavior: manualStart ? 'auto' : 'smooth' });
+  }, [manualStart]);
 
-  const createSlug = useCallback((short) => {
-    if (!short) return null;
-    const title = (short.title || short.name || '')
-      .toLowerCase()
-      .replace(/[^a-z0-9\s-ğüşıöçĞÜŞİÖÇ]/gi, '')
-      .replace(/\s+/g, '-')
-      .substring(0, 50);
-    return `${short.id}-${short.media_type}-${title}`;
-  }, []);
-
-  const parseSlug = useCallback((slugStr) => {
-    if (!slugStr) return null;
-    const parts = slugStr.split('-');
-    if (parts.length < 2) return null;
-    const id = parseInt(parts[0], 10);
-    const mediaType = parts[1];
-    if (isNaN(id) || !['movie', 'tv'].includes(mediaType)) return null;
-    return { id, mediaType };
-  }, []);
-
-  // Initial slug processing
+  // Aktif sahne, kaydırma durduğunda hesaplanır (kaydırma ortasında video değişmez).
   useEffect(() => {
-    const processInitialSlug = async () => {
-      if (slug && !initialSlugProcessed.current && isReady) {
-        const parsed = parseSlug(slug);
-        if (parsed) {
-          const targetIndex = shorts.findIndex(
-            s => s.id === parsed.id && s.media_type === parsed.mediaType
-          );
-
-          if (targetIndex !== -1) {
-            if (targetIndex !== currentIndex) {
-              goToIndex(targetIndex);
-            }
-          } else {
-            try {
-              const singleShort = await shortsService.getShortById(parsed.id, parsed.mediaType);
-              if (singleShort) {
-                prependShort(singleShort);
-              }
-            } catch (e) {
-              console.warn('Failed to load short from slug:', e);
-            }
-          }
-        }
-        initialSlugProcessed.current = true;
-      }
+    const el = scrollerRef.current;
+    if (!el) return undefined;
+    let timer;
+    const settle = () => {
+      clearTimeout(timer);
+      setActive(Math.round(el.scrollTop / Math.max(el.clientHeight, 1)));
     };
-    
-    processInitialSlug();
-  }, [isReady, slug, shorts, currentIndex, goToIndex, prependShort, parseSlug]);
+    const onScroll = () => {
+      clearTimeout(timer);
+      timer = setTimeout(settle, 100);
+    };
+    el.addEventListener('scroll', onScroll, { passive: true });
+    el.addEventListener('scrollend', settle);
+    return () => {
+      clearTimeout(timer);
+      el.removeEventListener('scroll', onScroll);
+      el.removeEventListener('scrollend', settle);
+    };
+  }, []);
 
-  // URL update
   useEffect(() => {
-    if (isReady && hasContent && shorts[currentIndex]) {
-      const newSlug = createSlug(shorts[currentIndex]);
-      if (newSlug) {
-        const currentPath = window.location.pathname;
-        const expectedPath = `/sahneler/${newSlug}`;
-        if (currentPath !== expectedPath) {
-          window.history.replaceState(null, '', expectedPath);
-        }
-      }
-    }
-  }, [currentIndex, shorts, isReady, hasContent, createSlug]);
+    ensureAhead(active);
+  }, [active, items.length, ensureAhead]);
 
-  // Scroll handler with momentum
-  const handleScroll = useCallback((direction) => {
-    const now = Date.now();
-    if (now - lastScrollTime.current < 250 || isTransitioning.current) return;
-    
-    lastScrollTime.current = now;
-    isTransitioning.current = true;
-    
-    // Haptic feedback simulation - visual pulse
-    if (containerRef.current) {
-      containerRef.current.classList.add('reels-haptic');
-      setTimeout(() => {
-        containerRef.current?.classList.remove('reels-haptic');
-      }, 100);
+  useEffect(() => {
+    setUserPaused(false);
+    if (active > 0 && swipeHint) {
+      setSwipeHint(false);
+      writeFlag('localStorage', 'shortsSwipeHintSeen', true);
     }
-    
-    if (direction === 'down') {
-      goToNext();
-    } else {
-      goToPrevious();
-    }
+    if (!activeItem) return undefined;
+    // Router'ın geçmiş kaydını koruyarak adresi güncelle (sayfa yeniden yüklenmez).
+    window.history.replaceState(window.history.state, '', `/sahneler/${createShortSlug(activeItem)}`);
+    const timer = setTimeout(() => seenShorts.add(activeKey), SEEN_AFTER_MS);
+    return () => clearTimeout(timer);
+  }, [activeKey]);
 
-    // Memory cleanup when scrolling far
-    if (currentIndex > 50) {
-      cleanupOldItems();
-    }
-    
-    setTimeout(() => {
-      isTransitioning.current = false;
-    }, 300);
-  }, [goToNext, goToPrevious, currentIndex, cleanupOldItems]);
+  useEffect(() => {
+    const onVisibility = () => setPageHidden(document.visibilityState === 'hidden');
+    document.addEventListener('visibilitychange', onVisibility);
+    return () => document.removeEventListener('visibilitychange', onVisibility);
+  }, []);
 
-  // Wheel event with momentum
-  const handleWheel = useCallback((e) => {
-    if (commentsModal.isOpen) return;
-    if (Math.abs(e.deltaY) > 15) {
-      handleScroll(e.deltaY > 0 ? 'down' : 'up');
-    }
-  }, [handleScroll, commentsModal.isOpen]);
+  useEffect(() => {
+    if (!notice) return;
+    toast.info(notice, 4000);
+    dismissNotice();
+  }, [notice]);
 
-  // Native touch events with visual feedback
-  const handleTouchStart = useCallback((e) => {
-    if (commentsModal.isOpen) return;
-    
-    const touch = e.touches[0];
-    touchStartRef.current = {
-      y: touch.clientY,
-      x: touch.clientX,
-      time: Date.now()
-    };
-    lastTouchY.current = touch.clientY;
-    velocityRef.current = 0;
-    setIsDragging(true);
-    setSwipeDirection(null);
-  }, [commentsModal.isOpen]);
+  // ---------- Oynatma kontrolleri ----------
 
-  const handleTouchMove = useCallback((e) => {
-    if (!isDragging || commentsModal.isOpen) return;
-    
-    const touch = e.touches[0];
-    const deltaY = touchStartRef.current.y - touch.clientY;
-    const deltaX = Math.abs(touchStartRef.current.x - touch.clientX);
-    
-    // Yatay hareketi engelle (sayfa geçişleri için)
-    if (deltaX > Math.abs(deltaY) && Math.abs(deltaY) < 30) {
+  const togglePause = useCallback(() => {
+    if (manualStart && !started) {
+      setStarted(true);
+      setUserPaused(false);
       return;
     }
-    
-    // Velocity hesapla
-    velocityRef.current = touch.clientY - lastTouchY.current;
-    lastTouchY.current = touch.clientY;
-    
-    // Swipe yönünü belirle
-    if (Math.abs(deltaY) > 10 && !swipeDirection) {
-      setSwipeDirection(deltaY > 0 ? 'up' : 'down');
-    }
-    
-    // Rubber band effect
-    const maxDrag = 100;
-    const dampedDelta = deltaY > 0 
-      ? Math.min(deltaY * 0.4, maxDrag)
-      : Math.max(deltaY * 0.4, -maxDrag);
-    
-    if (animationFrameRef.current) {
-      cancelAnimationFrame(animationFrameRef.current);
-    }
-    
-    animationFrameRef.current = requestAnimationFrame(() => {
-      setDragOffset(dampedDelta);
+    setUserPaused(paused => !paused);
+  }, [manualStart, started]);
+
+  const toggleMute = useCallback(() => {
+    setMuted(value => {
+      writeFlag('sessionStorage', 'shortsMuted', !value);
+      return !value;
     });
-    
-    e.preventDefault();
-  }, [isDragging, commentsModal.isOpen, swipeDirection]);
-
-  const handleTouchEnd = useCallback((e) => {
-    if (!isDragging || commentsModal.isOpen) {
-      setIsDragging(false);
-      setDragOffset(0);
-      setSwipeDirection(null);
-      return;
-    }
-    
-    const touch = e.changedTouches[0];
-    const deltaY = touchStartRef.current.y - touch.clientY;
-    const timeDiff = Date.now() - touchStartRef.current.time;
-    const velocity = Math.abs(velocityRef.current);
-    
-    // Hızlı flick gesture (velocity based)
-    const isQuickFlick = timeDiff < 300 && Math.abs(deltaY) > 15;
-    // Normal swipe (distance based)
-    const isSwipe = Math.abs(deltaY) > 40;
-    // Momentum based (velocity)
-    const hasMomentum = velocity > 3;
-    
-    if (isQuickFlick || isSwipe || hasMomentum) {
-      handleScroll(deltaY > 0 ? 'down' : 'up');
-    }
-    
-    // Reset with spring animation
-    setDragOffset(0);
-    setIsDragging(false);
-    setSwipeDirection(null);
-    
-    if (animationFrameRef.current) {
-      cancelAnimationFrame(animationFrameRef.current);
-    }
-  }, [isDragging, commentsModal.isOpen, handleScroll]);
-
-  // Cleanup animation frame on unmount
-  useEffect(() => {
-    return () => {
-      if (animationFrameRef.current) {
-        cancelAnimationFrame(animationFrameRef.current);
-      }
-    };
+    setSoundHint(null);
   }, []);
 
-  // Keyboard events
-  const handleKeyDown = useCallback((e) => {
-    if (commentsModal.isOpen) return;
-    if (['INPUT', 'TEXTAREA'].includes(document.activeElement.tagName)) {
+  const handleAutoplayBlocked = useCallback(() => {
+    setMuted(true);
+    setSoundHint('blocked');
+  }, []);
+
+  const handleEnded = useCallback((item) => {
+    const current = itemsRef.current[activeRef.current];
+    if (!autoNextRef.current || !current || shortKey(current) !== shortKey(item)) return false;
+    go(activeRef.current + 1);
+    return true;
+  }, [go]);
+
+  const handleUnplayable = useCallback((item, code) => {
+    if (code === 'api') {
+      setApiFailed(true);
       return;
     }
+    blockedTrailers.add(item.trailer.key);
+    const index = itemsRef.current.findIndex(entry => shortKey(entry) === shortKey(item));
+    if (index !== activeRef.current) return;
+    setTimeout(() => {
+      if (activeRef.current === index) go(index + 1);
+    }, SKIP_UNPLAYABLE_MS);
+  }, [go]);
 
-    if (e.key === 'ArrowDown' || e.key === 'j') {
-      e.preventDefault();
-      handleScroll('down');
-    } else if (e.key === 'ArrowUp' || e.key === 'k') {
-      e.preventDefault();
-      handleScroll('up');
-    } else if (e.key === 'm') {
-      e.preventDefault();
-      toggleMute();
-    } else if (e.key === ' ') {
-      e.preventDefault();
-    }
-  }, [handleScroll, toggleMute, commentsModal.isOpen]);
+  // ---------- Kitaplık eylemleri ----------
 
-  // Event listeners
+  const handleLike = useCallback((item) => {
+    if (actions.addFavorite(item, item.media_type)) toast.success('Favorilere eklendi', 1500);
+  }, [actions, toast]);
+
+  const handleToggleFavorite = useCallback((item) => {
+    const added = actions.toggleFavorite(item, item.media_type);
+    toast.success(added ? 'Favorilere eklendi' : 'Favorilerden çıkarıldı', 1500);
+  }, [actions, toast]);
+
+  const handleToggleWatchLater = useCallback((item) => {
+    const added = actions.toggleWatchLater(item, item.media_type);
+    toast.success(added ? 'İzleme listene eklendi' : 'İzleme listenden çıkarıldı', 1500);
+  }, [actions, toast]);
+
+  const handleShare = useCallback(async (item) => {
+    const result = await shareOrCopy({ title: getTitle(item), url: `${window.location.origin}/sahneler/${createShortSlug(item)}` });
+    if (result === 'copied') toast.success('Bağlantı kopyalandı', 2000);
+    if (result === 'failed') toast.error('Bağlantı paylaşılamadı');
+  }, [toast]);
+
+  // ---------- Klavye ----------
+
   useEffect(() => {
-    const container = containerRef.current;
-    if (!container) return;
-
-    container.addEventListener('wheel', handleWheel, { passive: false });
-    container.addEventListener('touchstart', handleTouchStart, { passive: true });
-    container.addEventListener('touchmove', handleTouchMove, { passive: false });
-    container.addEventListener('touchend', handleTouchEnd, { passive: true });
-    window.addEventListener('keydown', handleKeyDown);
-
-    return () => {
-      container.removeEventListener('wheel', handleWheel);
-      container.removeEventListener('touchstart', handleTouchStart);
-      container.removeEventListener('touchmove', handleTouchMove);
-      container.removeEventListener('touchend', handleTouchEnd);
-      window.removeEventListener('keydown', handleKeyDown);
+    const onKeyDown = (event) => {
+      if (event.metaKey || event.ctrlKey || event.altKey) return;
+      if (event.target.closest?.('input, textarea, select, [contenteditable="true"]')) return;
+      switch (event.key) {
+        case 'ArrowDown':
+        case 'PageDown':
+        case 'j':
+          event.preventDefault();
+          go(activeRef.current + 1);
+          break;
+        case 'ArrowUp':
+        case 'PageUp':
+        case 'k':
+          event.preventDefault();
+          go(activeRef.current - 1);
+          break;
+        case ' ':
+          if (event.target.closest?.('button, a')) return;
+          event.preventDefault();
+          togglePause();
+          break;
+        case 'm':
+        case 'M':
+          toggleMute();
+          break;
+        default:
+          break;
+      }
     };
-  }, [handleWheel, handleTouchStart, handleTouchMove, handleTouchEnd, handleKeyDown]);
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [go, togglePause, toggleMute]);
 
-  // Visible items (only render ±1 for performance)
-  const visibleItems = useMemo(() => {
-    return shorts.map((short, index) => {
-      const isVisible = Math.abs(index - currentIndex) <= 1;
-      return { short, index, isVisible };
-    }).filter(item => item.isVisible);
-  }, [shorts, currentIndex]);
+  // ---------- Görünüm ----------
 
-  if (!isReady || !hasContent) {
-    return (
-      <div className="reels-container">
-        <div className="reels-skeleton">
-          <div className="reels-skeleton-shimmer" />
-          <div className="reels-skeleton-content">
-            <div className="reels-skeleton-badge" />
-            <div className="reels-skeleton-title" />
-            <div className="reels-skeleton-meta" />
-            <div className="reels-skeleton-button" />
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  // Calculate transform with drag offset
-  const trackTransform = isDragging 
-    ? `translateY(calc(-${currentIndex * 100}% - ${dragOffset}px))`
-    : `translateY(-${currentIndex * 100}%)`;
+  const autoplayAllowed = (!manualStart || started) && !apiFailed;
+  const activeMode = autoplayAllowed && !userPaused && !pageHidden ? 'play' : 'pause';
+  const title = activeItem ? getTitle(activeItem) : null;
 
   return (
-    <>
+    <div className="shorts">
       <Helmet>
-        <title>Sahneler | SineFix</title>
-        <meta name="description" content="Film ve dizi sahneleri" />
+        <title>{title ? `${title} · Sahneler - SINEFIX` : 'Sahneler - SINEFIX'}</title>
+        <meta name="description" content="Film ve dizi fragmanlarını dikey akışta keşfet." />
+        <link rel="preconnect" href="https://www.youtube-nocookie.com" />
+        <link rel="preconnect" href="https://i.ytimg.com" />
       </Helmet>
 
-      <div 
-        className={`reels-container ${isDragging ? 'is-dragging' : ''}`} 
-        ref={containerRef}
-      >
-        <div className="reels-feed">
-          <div
-            className="reels-track"
-            style={{
-              transform: trackTransform,
-              transition: isDragging ? 'none' : 'transform 0.35s cubic-bezier(0.32, 0.72, 0, 1)'
+      <div className="shorts-topbar">
+        <h1 className="shorts-heading">Sahneler</h1>
+        <div className="flex items-center gap-1">
+          <button
+            type="button"
+            className={`shorts-tool ${autoNext ? 'active' : ''}`}
+            onClick={() => {
+              writeFlag('localStorage', 'shortsAutoNext', !autoNext);
+              toast.info(!autoNext ? 'Fragman bitince sonrakine geçilecek' : 'Fragman bitince başa sarılacak', 2000);
+              setAutoNext(!autoNext);
             }}
+            aria-pressed={autoNext}
+            title="Fragman bitince otomatik geç"
           >
-            {visibleItems.map(({ short, index }) => (
-              <div 
-                key={`${short.id}-${short.media_type}`} 
-                className="reels-slide"
-                style={{ top: `${index * 100}%` }}
-              >
-                <ShortsCard
-                  short={short}
-                  isActive={index === currentIndex}
-                  isNext={index === currentIndex + 1}
-                  isMuted={isMuted}
-                  onToggleMute={toggleMute}
-                  user={user}
-                  onOpenComments={openCommentsModal}
-                />
-              </div>
-            ))}
-          </div>
+            <FaForward /> <span>Otomatik</span>
+          </button>
+          <button
+            type="button"
+            className="shorts-tool fill-toggle"
+            onClick={() => {
+              writeFlag('localStorage', 'shortsFill', !fill);
+              setFill(!fill);
+            }}
+            aria-label={fill ? 'Videoyu ekrana sığdır' : 'Videoyla ekranı doldur'}
+            title={fill ? 'Sığdır' : 'Doldur'}
+          >
+            {fill ? <FaCompress /> : <FaExpand />}
+          </button>
         </div>
+      </div>
 
-        {/* Swipe direction indicator */}
-        {isDragging && swipeDirection && (
-          <div className={`reels-swipe-indicator ${swipeDirection}`}>
-            <span>{swipeDirection === 'up' ? '↑' : '↓'}</span>
-          </div>
+      {soundHint && muted && !apiFailed && items.length > 0 && (
+        <button type="button" className="shorts-sound-hint" onClick={toggleMute}>
+          <FaVolumeMute /> {soundHint === 'blocked' ? 'Tarayıcı sesi kapattı — açmak için dokun' : 'Sesi açmak için dokun'}
+        </button>
+      )}
+
+      {apiFailed && (
+        <div className="shorts-banner" role="alert">
+          <FaExclamationTriangle className="flex-shrink-0 text-yellow-400" />
+          YouTube oynatıcısı yüklenemedi. Ağ bağlantını veya reklam engelleyiciyi kontrol et.
+        </div>
+      )}
+
+      <div className="shorts-scroller" ref={scrollerRef} role="feed" aria-busy={status === 'loading'} aria-label="Fragman akışı">
+        {items.map((item, index) => {
+          const distance = index - active;
+          const playerMode = distance === 0 ? activeMode : distance === 1 && !manualStart && !apiFailed ? 'preload' : null;
+          return (
+            <ShortSlide
+              key={shortKey(item)}
+              item={item}
+              index={index}
+              isActive={distance === 0}
+              playerMode={playerMode}
+              showMedia={Math.abs(distance) <= 2}
+              muted={muted}
+              fill={fill}
+              userPaused={distance === 0 && userPaused}
+              needsStart={distance === 0 && manualStart && !started}
+              genreMap={genreMap}
+              isFavorite={actions.isFavorite(item.id, item.media_type)}
+              inWatchLater={actions.isWatchLater(item.id, item.media_type)}
+              onTogglePause={togglePause}
+              onToggleMute={toggleMute}
+              onLike={handleLike}
+              onToggleFavorite={handleToggleFavorite}
+              onToggleWatchLater={handleToggleWatchLater}
+              onShare={handleShare}
+              onEnded={handleEnded}
+              onUnplayable={handleUnplayable}
+              onAutoplayBlocked={handleAutoplayBlocked}
+            />
+          );
+        })}
+
+        {(status === 'loading' || status === 'ready') && (
+          <StatusSlide loading>
+            <Spinner />
+            <p className="text-sm text-white/55">{items.length ? 'Yeni sahneler yükleniyor…' : 'Sahneler hazırlanıyor…'}</p>
+          </StatusSlide>
         )}
-
-        {/* Swipe hint - sadece ilk video için göster */}
-        {currentIndex === 0 && !isDragging && (
-          <div className="reels-swipe-hint visible">
-            <span>↑ Kaydır ↓</span>
-          </div>
+        {(status === 'error' || status === 'stalled') && (
+          <StatusSlide>
+            <FaExclamationTriangle className="text-2xl text-yellow-400" />
+            <p className="text-sm text-white/65">Sahneler yüklenemedi. Bağlantını kontrol edip tekrar dene.</p>
+            <button type="button" className="btn btn-primary btn-sm" onClick={retry}><FaRedo className="text-xs" /> Tekrar dene</button>
+          </StatusSlide>
         )}
-
-        {/* Preload next thumbnail */}
-        {shorts[currentIndex + 1]?.trailer?.key && (
-          <link
-            rel="preload"
-            as="image"
-            href={shortsService.getThumbnailUrl(shorts[currentIndex + 1].trailer.key)}
-          />
+        {(status === 'end' || status === 'empty') && (
+          <StatusSlide>
+            <p className="text-base font-bold">{items.length ? 'Şimdilik bu kadar' : 'Gösterilecek sahne bulunamadı'}</p>
+            <p className="text-sm text-white/55">Biraz sonra yeni fragmanlar eklenecek.</p>
+            <div className="flex gap-2">
+              {items.length > 0 && <button type="button" className="btn btn-secondary btn-sm" onClick={() => go(0)}>Başa dön</button>}
+              <Link to="/movies" className="btn btn-primary btn-sm">Filmlere göz at</Link>
+            </div>
+          </StatusSlide>
         )}
       </div>
 
-      {/* Yorum Modalı */}
-      <CommentsModal
-        isOpen={commentsModal.isOpen}
-        onClose={closeCommentsModal}
-        mediaId={commentsModal.short?.id}
-        mediaType={commentsModal.short?.media_type}
-        title={commentsModal.title}
-      />
-    </>
+      <div className="shorts-nav">
+        <button type="button" className="icon-btn bordered lg" onClick={(event) => { releaseMouseFocus(event); go(active - 1); }} disabled={active === 0} aria-label="Önceki sahne (↑)">
+          <FaChevronUp />
+        </button>
+        <button type="button" className="icon-btn bordered lg" onClick={(event) => { releaseMouseFocus(event); go(active + 1); }} disabled={active >= items.length - (['loading', 'ready'].includes(status) ? 1 : 0)} aria-label="Sonraki sahne (↓)">
+          <FaChevronDown />
+        </button>
+      </div>
+
+      {swipeHint && active === 0 && items.length > 1 && (
+        <div className="shorts-swipe-hint" aria-hidden="true">
+          <FaChevronUp /> Sonraki sahne için kaydır
+        </div>
+      )}
+
+      <div className="sr-only" aria-live="polite">{title}</div>
+    </div>
   );
 };
 

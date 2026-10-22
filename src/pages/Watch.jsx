@@ -1,421 +1,280 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
-import { FaArrowLeft, FaExclamationTriangle, FaList, FaTv, FaChevronDown } from 'react-icons/fa';
-import { movieService, tvService, getImageUrl } from '../services/tmdb';
+import { FaArrowLeft, FaChevronLeft, FaChevronRight, FaStar, FaInfoCircle } from 'react-icons/fa';
+import { getImageUrl } from '../services/tmdb';
 import { playerService } from '../services/player';
-import Loading from '../components/UI/Loading';
+import { useDetail, useSeason } from '../hooks';
+import { useApp } from '../contexts';
+import EpisodeList, { SeasonSelect, orderSeasons } from '../components/Detail/EpisodeList';
+import { Spinner } from '../components/UI/Loading';
+import { EmptyState, ErrorState } from '../components/UI/States';
+import {
+  formatDate, formatRuntime, getDetailPath, getMediaLabel, getReleaseDate, getTitle, getWatchPath, getYear, isFutureDate,
+} from '../utils/helpers';
+
+const PROVIDERS = ['vidsrc', 'vidfast'];
+const PROVIDER_KEY = 'preferredPlayerSource';
+
+const readPreferredProvider = () => {
+  try {
+    return window.localStorage.getItem(PROVIDER_KEY);
+  } catch {
+    return null;
+  }
+};
+
+const isReleased = (season) => season && season.air_date && !isFutureDate(season.air_date);
+
+// Bir önceki/sonraki bölümü sezon sınırlarını aşarak bul.
+export const getAdjacentEpisode = (seasons, season, episode, episodeCount, direction) => {
+  const ordered = seasons.filter(s => s.season_number > 0);
+  const index = ordered.findIndex(s => s.season_number === season);
+  if (direction > 0) {
+    if (episode < episodeCount) return { season, episode: episode + 1 };
+    const next = ordered[index + 1];
+    return next && isReleased(next) ? { season: next.season_number, episode: 1 } : null;
+  }
+  if (episode > 1) return { season, episode: episode - 1 };
+  const prev = ordered[index - 1];
+  return prev && prev.episode_count ? { season: prev.season_number, episode: prev.episode_count } : null;
+};
 
 const Watch = () => {
   const { type, id } = useParams();
+  const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const [content, setContent] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [selectedProvider, setSelectedProvider] = useState(0);
-  const [selectedSeason, setSelectedSeason] = useState(1);
-  const [selectedEpisode, setSelectedEpisode] = useState(1);
-  const [playerUrls, setPlayerUrls] = useState([]);
-  const [seasonData, setSeasonData] = useState(null);
-  const [dropdownOpen, setDropdownOpen] = useState(false);
-  const dropdownRef = useRef(null);
+  const isTv = type === 'tv';
+  const { data: media, isLoading, isError, error, refetch } = useDetail(type, id);
+  const { actions } = useApp();
+  const addContinueWatching = useRef(actions.addContinueWatching);
+  addContinueWatching.current = actions.addContinueWatching;
 
-  useEffect(() => {
-    loadContent();
-  }, [type, id]);
+  const seasons = useMemo(() => orderSeasons(media?.seasons), [media]);
+  const defaultSeason = seasons.find(s => s.season_number > 0)?.season_number ?? seasons[0]?.season_number ?? 1;
+  const season = Number(searchParams.get('season')) || defaultSeason;
+  const episode = Number(searchParams.get('episode')) || 1;
+  const seasonQuery = useSeason(isTv && media ? id : null, season);
+  const episodes = seasonQuery.data?.episodes || [];
+  const currentEpisode = episodes.find(e => e.episode_number === episode);
 
-  useEffect(() => {
-    if (type === 'tv' && content) {
-      loadSeasonData();
-    }
-  }, [selectedSeason, content]);
+  const sources = useMemo(
+    () => (isTv ? playerService.getTvUrl(id, season, episode, PROVIDERS) : playerService.getMovieUrl(id, PROVIDERS)),
+    [isTv, id, season, episode]
+  );
+  const [provider, setProvider] = useState(() => {
+    const saved = readPreferredProvider();
+    return PROVIDERS.includes(saved) ? saved : PROVIDERS[0];
+  });
+  const source = sources.find(s => s.provider === provider) || sources[0];
 
-  useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
-        setDropdownOpen(false);
-      }
-    };
-
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, []);
-
-  const loadContent = async () => {
+  const chooseProvider = (value) => {
+    setProvider(value);
     try {
-      setLoading(true);
-      
-      if (type === 'movie') {
-        const response = await movieService.getDetail(id);
-        setContent(response.data);
-        
-        const defaultProviders = ['vidsrc', 'vidfast'];
-        const urls = playerService.getMovieUrl(id, defaultProviders);
-        setPlayerUrls(urls);
-      } else if (type === 'tv') {
-        const response = await tvService.getDetail(id);
-        setContent(response.data);
-        const defaultProviders = ['vidsrc', 'vidfast'];
-        updateTvPlayerUrls(response.data.id, 1, 1, defaultProviders);
-      }
-    } catch (error) {
-      console.error('Content load error:', error);
-      navigate('/404');
-    } finally {
-      setLoading(false);
+      window.localStorage.setItem(PROVIDER_KEY, value);
+    } catch {
+      // tercih kaydedilemezse sorun değil
     }
   };
 
-  const loadSeasonData = async () => {
-    if (!content) return;
-    
-    try {
-      const response = await tvService.getSeasonDetail(content.id, selectedSeason);
-      setSeasonData(response.data);
-    } catch (error) {
-      console.error('Season load error:', error);
+  // Bölüm değişince (özellikle mobilde liste oynatıcının altındayken) oynatıcıya dön.
+  const firstRender = useRef(true);
+  useEffect(() => {
+    if (firstRender.current) {
+      firstRender.current = false;
+      return;
     }
-  };
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, [season, episode]);
 
-  const updateTvPlayerUrls = (tvId, season, episode, providers = ['vidsrc', 'vidfast']) => {
-    const urls = playerService.getTvUrl(tvId, season, episode, providers);
-    setPlayerUrls(urls);
-  };
+  // "İzlemeye devam et" listesini güncelle
+  useEffect(() => {
+    if (!media) return;
+    addContinueWatching.current(media, type, isTv ? { season, episode, episodeName: currentEpisode?.name } : {});
+  }, [media, type, isTv, season, episode, currentEpisode?.name]);
 
-  const handleEpisodeChange = (episode) => {
-    setSelectedEpisode(episode);
-    updateTvPlayerUrls(content.id, selectedSeason, episode);
-    setSelectedProvider(0);
-  };
+  if (isLoading) {
+    return <div className="flex min-h-[60vh] items-center justify-center"><Spinner /></div>;
+  }
 
-  const handleSeasonChange = (season) => {
-    setSelectedSeason(season);
-    setSelectedEpisode(1);
-    updateTvPlayerUrls(content.id, season, 1);
-    setSelectedProvider(0);
-  };
-
-  if (loading) return <Loading />;
-  if (!content || !playerUrls.length) return null;
-
-  const title = content.title || content.name;
-  const currentUrl = playerUrls[selectedProvider]?.url;
-
-  const getQualityLabel = (provider) => {
-    if (provider.quality) {
-      return (
-        <span className="ml-2 text-xs px-1.5 py-0.5 bg-black/20 rounded">
-          {provider.quality}
-        </span>
-      );
-    }
-    return null;
-  };
-
-  const getSelectedProviderText = () => {
-    if (!playerUrls.length) return 'Kaynak Seçin';
-    
-    const provider = playerUrls[selectedProvider];
-    
+  if (isError || !media) {
     return (
-      <>
-        <span>{provider.name}</span>
-        {getQualityLabel(provider)}
-      </>
+      <div className="container-custom py-10">
+        {error?.response?.status === 404 ? (
+          <EmptyState title="İçerik bulunamadı" description="Bağlantı hatalı olabilir.">
+            <Link to="/" className="btn btn-secondary">Ana sayfaya dön</Link>
+          </EmptyState>
+        ) : (
+          <ErrorState onRetry={refetch} />
+        )}
+      </div>
     );
-  };
+  }
+
+  const title = getTitle(media);
+  const episodeCount = seasons.find(s => s.season_number === season)?.episode_count || episodes.length;
+  const prev = isTv ? getAdjacentEpisode(seasons, season, episode, episodeCount, -1) : null;
+  const next = isTv ? getAdjacentEpisode(seasons, season, episode, episodeCount, 1) : null;
+  const related = (media.recommendations?.results?.length ? media.recommendations.results : media.similar?.results || []).slice(0, 8);
+  const subtitle = isTv
+    ? `${season}. Sezon · ${episode}. Bölüm${currentEpisode?.name ? ` · ${currentEpisode.name}` : ''}`
+    : [getYear(media.release_date), formatRuntime(media.runtime)].filter(Boolean).join(' · ');
+  const overview = (isTv && currentEpisode?.overview) || media.overview;
 
   return (
     <>
       <Helmet>
-        <title>{title} İzle - SINEFIX</title>
+        <title>{`${title}${isTv ? ` S${season} B${episode}` : ''} izle - SINEFIX`}</title>
       </Helmet>
 
-      <div className="min-h-screen bg-black">
-        <div className="bg-gray-950 border-b border-gray-900 pt-16">
-          <div className="container-custom py-4">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-              <div className="flex items-center space-x-3 sm:space-x-4">
-                <Link
-                  to={type === 'movie' ? `/movie/${id}` : `/tv/${id}`}
-                  className="p-2.5 bg-white/5 border border-white/5 rounded-xl hover:bg-white/10 transition-all"
-                >
-                  <FaArrowLeft className="text-sm" />
-                </Link>
-                <div className="min-w-0">
-                  <h1 className="text-lg sm:text-xl font-bold truncate leading-tight">{title}</h1>
-                  {type === 'tv' && seasonData && (
-                    <p className="text-[10px] sm:text-xs text-gray-500 uppercase tracking-widest mt-0.5">
-                      S{selectedSeason} E{selectedEpisode} • {seasonData.episodes?.[selectedEpisode - 1]?.name}
-                    </p>
-                  )}
+      <div className="container-custom flex items-center gap-3 py-3 lg:py-5">
+        <Link to={getDetailPath(media, type)} className="icon-btn bordered flex-shrink-0" aria-label={`${title} detayına dön`}>
+          <FaArrowLeft className="text-sm" />
+        </Link>
+        <div className="min-w-0">
+          <h1 className="truncate text-base font-bold sm:text-lg lg:text-xl">{title}</h1>
+          {subtitle && <p className="truncate text-xs text-white/45 sm:text-sm">{subtitle}</p>}
+        </div>
+      </div>
+
+      <div className="mx-auto grid max-w-[var(--container)] gap-6 sm:px-[var(--gutter)] lg:grid-cols-[minmax(0,1fr)_360px] lg:gap-8">
+        <div className="min-w-0">
+          <div className="player-frame">
+            {source ? (
+              <iframe
+                key={source.url}
+                src={source.url}
+                title={`${title} oynatıcı`}
+                referrerPolicy="origin"
+                allow="autoplay; encrypted-media; fullscreen; picture-in-picture"
+              />
+            ) : (
+              <div className="flex h-full items-center justify-center text-sm text-white/50">Kaynak bulunamadı</div>
+            )}
+          </div>
+
+          <div className="mt-4 space-y-5 px-[var(--gutter)] sm:px-0">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex items-center gap-3">
+                <span className="text-xs font-semibold text-white/40">Kaynak</span>
+                <div className="segmented">
+                  {sources.map((s, i) => (
+                    <button key={s.provider} type="button" className={s.provider === source?.provider ? 'active' : ''} onClick={() => chooseProvider(s.provider)}>
+                      {i + 1}. {s.name}
+                    </button>
+                  ))}
                 </div>
               </div>
-              
-              <div className="relative w-full sm:w-auto" ref={dropdownRef}>
-                <button 
-                  onClick={() => setDropdownOpen(!dropdownOpen)}
-                  className="w-full flex items-center justify-between sm:justify-start space-x-3 px-5 py-2.5 bg-[#050505] border border-white/5 hover:border-white/20 transition-all rounded-xl text-xs font-bold tracking-widest uppercase"
-                >
-                  <span className="flex items-center gap-2">
-                    <div className="w-1.5 h-1.5 rounded-full bg-red-600 animate-pulse"/>
-                    {getSelectedProviderText()}
-                  </span>
-                  <FaChevronDown className={`ml-2 transition-transform duration-300 ${dropdownOpen ? 'rotate-180' : ''}`} />
-                </button>
-                
-                {dropdownOpen && (
-                  <div className="absolute right-0 mt-2 w-full sm:w-64 max-h-96 overflow-y-auto bg-[#0a0a0a] border border-white/10 rounded-2xl shadow-2xl z-50 py-2 animate-fade-in-up">
-                    <div className="px-4 py-2 mb-1">
-                      <p className="text-[9px] font-black text-gray-600 uppercase tracking-[0.2em]">Kaynak Seçenekleri</p>
-                    </div>
-                    {playerUrls.map((provider, index) => {
-                      const isActive = selectedProvider === index;
-                      return (
-                        <button
-                          key={index}
-                          onClick={() => {
-                            setSelectedProvider(index);
-                            setDropdownOpen(false);
-                          }}
-                          className={`w-full flex items-center px-4 py-3.5 text-left transition-all ${isActive ? 'bg-white/10 text-white' : 'text-gray-500 hover:bg-white/5 hover:text-white'}`}
-                        >
-                          <div className="flex items-center justify-between w-full">
-                            <span className="text-[11px] font-bold uppercase tracking-widest">{provider.name}</span>
-                            {provider.quality && (
-                              <span className="text-[9px] font-black px-2 py-0.5 bg-white/5 rounded-md uppercase tracking-tighter">
-                                {provider.quality}
-                              </span>
-                            )}
-                          </div>
-                          {isActive && <div className="ml-3 w-1.5 h-1.5 bg-red-600 rounded-full shadow-[0_0_8px_rgba(220,38,38,0.8)]"></div>}
-                        </button>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
+
+              {isTv && (
+                <div className="flex gap-2">
+                  <Link
+                    to={prev ? getWatchPath(media, 'tv', prev) : '#'}
+                    className={`btn btn-secondary btn-sm flex-1 sm:flex-none ${prev ? '' : 'pointer-events-none opacity-40'}`}
+                    aria-disabled={!prev}
+                    replace
+                  >
+                    <FaChevronLeft className="text-[10px]" /> Önceki
+                  </Link>
+                  <Link
+                    to={next ? getWatchPath(media, 'tv', next) : '#'}
+                    className={`btn btn-primary btn-sm flex-1 sm:flex-none ${next ? '' : 'pointer-events-none opacity-40'}`}
+                    aria-disabled={!next}
+                    replace
+                  >
+                    Sonraki bölüm <FaChevronRight className="text-[10px]" />
+                  </Link>
+                </div>
+              )}
             </div>
-          </div>
-        </div>
 
-        <div className="container-custom py-6">
-          <div className="grid lg:grid-cols-4 gap-6">
-            <div className="lg:col-span-3">
-              <div className="relative aspect-video bg-black rounded-lg overflow-hidden mb-4 group">
-                {!currentUrl && (
-                  <div className="absolute inset-0">
-                    <img
-                      src={getImageUrl(content.backdrop_path, 'original')}
-                      alt={title}
-                      className="w-full h-full object-cover"
-                    />
-                    <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
-                      <button
-                        onClick={() => setSelectedProvider(0)}
-                        className="w-20 h-20 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center hover:bg-white/30 transition-all duration-300 hover:scale-110"
-                      >
-                        <svg className="w-8 h-8 text-white ml-1" fill="currentColor" viewBox="0 0 24 24">
-                          <path d="M8 5v14l11-7z"/>
-                        </svg>
-                      </button>
-                    </div>
-                  </div>
-                )}
+            <p className="flex items-start gap-2 text-xs leading-relaxed text-white/40">
+              <FaInfoCircle className="mt-0.5 flex-shrink-0" />
+              Oynatıcı üçüncü taraf bir kaynaktan yüklenir. Video açılmazsa diğer kaynağı deneyin.
+            </p>
 
-                {currentUrl && (
-                  <iframe
-                    src={currentUrl}
-                    className="absolute inset-0 w-full h-full"
-                    style={{ border: 'none' }}
-                    allowFullScreen
-                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            <section className="surface p-4 sm:p-5">
+              <div className="flex gap-4">
+                {isTv && currentEpisode?.still_path && (
+                  <img
+                    src={getImageUrl(currentEpisode.still_path, 'w300')}
+                    alt=""
+                    className="hidden aspect-video w-40 flex-shrink-0 rounded-lg object-cover sm:block"
                   />
                 )}
-
-                {!currentUrl && !content.backdrop_path && (
-                  <div className="flex items-center justify-center h-full bg-gray-800">
-                    <div className="text-center">
-                      <div className="w-16 h-16 bg-gray-700 rounded-full flex items-center justify-center mb-4">
-                        <svg className="w-8 h-8 text-gray-500" fill="currentColor" viewBox="0 0 24 24">
-                          <path d="M8 5v14l11-7z"/>
-                        </svg>
-                      </div>
-                      <p className="text-gray-400">İçerik yükleniyor...</p>
-                    </div>
+                <div className="min-w-0">
+                  <h2 className="font-bold">
+                    {isTv ? currentEpisode?.name || `${episode}. Bölüm` : title}
+                  </h2>
+                  <div className="meta-row mt-1">
+                    {(isTv ? currentEpisode?.vote_average : media.vote_average) > 0 && (
+                      <span className="rating">
+                        <FaStar className="text-[10px]" /> {(isTv ? currentEpisode.vote_average : media.vote_average).toFixed(1)}
+                      </span>
+                    )}
+                    {isTv && currentEpisode?.air_date && <span>{formatDate(currentEpisode.air_date)}</span>}
+                    {isTv && formatRuntime(currentEpisode?.runtime) && <span>{formatRuntime(currentEpisode.runtime)}</span>}
+                    {media.genres?.slice(0, 3).map(g => <span key={g.id}>{g.name}</span>)}
                   </div>
-                )}
-              </div>
-
-              {type === 'tv' && seasonData?.episodes?.[selectedEpisode - 1] && (
-                <div className="bg-[#050505] border border-white/5 rounded-2xl p-5 sm:p-8 mb-6">
-                  <div className="flex flex-col md:flex-row gap-6 mb-8">
-                    <div className="flex-shrink-0 w-full md:w-56 aspect-video bg-black rounded-xl overflow-hidden shadow-2xl border border-white/5">
-                      {seasonData.episodes[selectedEpisode - 1].still_path ? (
-                        <img
-                          src={getImageUrl(seasonData.episodes[selectedEpisode - 1].still_path, 'w300')}
-                          alt={seasonData.episodes[selectedEpisode - 1].name}
-                          className="w-full h-full object-cover"
-                        />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center">
-                          <FaTv className="text-gray-600 text-2xl" />
-                        </div>
-                      )}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <h2 className="text-xl sm:text-2xl font-bold mb-3 truncate italic uppercase tracking-tighter">
-                        S{selectedSeason}E{selectedEpisode} • {seasonData.episodes[selectedEpisode - 1].name}
-                      </h2>
-                      <div className="flex flex-wrap items-center gap-4 text-[10px] font-bold uppercase tracking-widest text-gray-500">
-                        {seasonData.episodes[selectedEpisode - 1].air_date && (
-                          <span className="px-2 py-0.5 bg-white/5 rounded">📅 {new Date(seasonData.episodes[selectedEpisode - 1].air_date).getFullYear()}</span>
-                        )}
-                        {seasonData.episodes[selectedEpisode - 1].runtime && (
-                          <span className="px-2 py-0.5 bg-white/5 rounded">⏱️ {seasonData.episodes[selectedEpisode - 1].runtime} DK</span>
-                        )}
-                        {seasonData.episodes[selectedEpisode - 1].vote_average > 0 && (
-                          <span className="px-2 py-0.5 bg-white/5 rounded text-yellow-500">⭐ {seasonData.episodes[selectedEpisode - 1].vote_average.toFixed(1)}</span>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                  <p className="text-gray-400 text-sm sm:text-base leading-relaxed pt-8 border-t border-white/5 font-light">
-                    {seasonData.episodes[selectedEpisode - 1].overview || 'Bu bölüm için detaylar henüz paylaşılmadı.'}
-                  </p>
-                </div>
-              )}
-
-              <div className="bg-[#050505] border border-white/5 rounded-2xl p-6 sm:p-8">
-                <h2 className="text-[10px] font-black uppercase tracking-[0.3em] text-gray-600 mb-6">
-                  {type === 'tv' ? 'DİZİ DETAYLARI' : 'FİLM DETAYLARI'}
-                </h2>
-                <p className="text-gray-400 leading-relaxed text-sm sm:text-base font-light">
-                  {content.overview}
-                </p>
-                
-                <div className="mt-10 grid grid-cols-2 sm:grid-cols-3 gap-6 pt-8 border-t border-white/5">
-                  <div>
-                    <p className="text-[9px] font-bold text-gray-600 uppercase tracking-widest mb-1">Kategori</p>
-                    <p className="text-white text-xs font-bold truncate">
-                      {content.genres?.[0]?.name || 'Genel'}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-[9px] font-bold text-gray-600 uppercase tracking-widest mb-1">Yıl</p>
-                    <p className="text-white text-xs font-bold">
-                      {new Date(content.release_date || content.first_air_date).getFullYear()}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-[9px] font-bold text-gray-600 uppercase tracking-widest mb-1">IMDB</p>
-                    <p className="text-white text-xs font-bold flex items-center gap-1">
-                      ⭐ {content.vote_average.toFixed(1)}
-                    </p>
-                  </div>
+                  {overview && <p className="mt-3 text-sm leading-relaxed text-white/65">{overview}</p>}
                 </div>
               </div>
-            </div>
-
-            <div className="lg:col-span-1 space-y-4">
-              {type === 'tv' && content.seasons && (
-                <div className="bg-[#050505] border border-white/5 rounded-2xl p-5 sm:p-6">
-                  <h3 className="text-[10px] font-black uppercase tracking-[0.3em] text-gray-600 mb-6 flex items-center">
-                    <FaTv className="mr-3" />
-                    BÖLÜM LİSTESİ
-                  </h3>
-
-                  <div className="mb-6">
-                    <select
-                      value={selectedSeason}
-                      onChange={(e) => handleSeasonChange(Number(e.target.value))}
-                      className="w-full bg-[#0a0a0a] border border-white/10 text-white rounded-xl px-4 py-3 text-xs font-bold tracking-widest uppercase focus:outline-none focus:border-white/30 transition-all appearance-none cursor-pointer"
-                    >
-                      {content.seasons
-                        .filter(season => season.season_number > 0)
-                        .map(season => (
-                          <option key={season.season_number} value={season.season_number}>
-                            SEZON {season.season_number}
-                          </option>
-                        ))}
-                    </select>
-                  </div>
-
-                  <div className="space-y-3 max-h-[50vh] sm:max-h-96 overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-white/10">
-                    {seasonData?.episodes?.map(episode => (
-                      <button
-                        key={episode.episode_number}
-                        onClick={() => handleEpisodeChange(episode.episode_number)}
-                        className={`w-full text-left p-3 rounded-xl transition-all duration-300 ${
-                          selectedEpisode === episode.episode_number
-                            ? 'bg-white text-black scale-[0.98]'
-                            : 'bg-white/5 border border-white/5 text-gray-400 hover:bg-white/10 hover:text-white'
-                        }`}
-                      >
-                        <div className="flex items-center space-x-4">
-                          <div className={`flex-shrink-0 w-16 h-10 rounded-lg overflow-hidden border ${selectedEpisode === episode.episode_number ? 'border-black/20' : 'border-white/5'}`}>
-                            {episode.still_path ? (
-                              <img
-                                src={getImageUrl(episode.still_path, 'w185')}
-                                alt={episode.name}
-                                className={`w-full h-full object-cover ${selectedEpisode === episode.episode_number ? 'grayscale-0' : 'grayscale group-hover:grayscale-0'}`}
-                              />
-                            ) : (
-                              <div className="w-full h-full flex items-center justify-center bg-black/40">
-                                <FaTv className="text-xs" />
-                              </div>
-                            )}
-                          </div>
-                          <div className="flex-grow min-w-0">
-                            <p className="text-[11px] font-black uppercase tracking-tight truncate">
-                              {episode.episode_number}. {episode.name}
-                            </p>
-                            <p className={`text-[9px] font-bold uppercase tracking-widest mt-0.5 ${selectedEpisode === episode.episode_number ? 'text-black/50' : 'text-gray-600'}`}>
-                              {episode.runtime ? `${episode.runtime} DK` : 'BELİRSİZ'}
-                            </p>
-                          </div>
-                        </div>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              <div className="bg-[#0a0a0a] border border-[#1a1a1a] rounded p-4">
-                <h3 className="text-xs uppercase tracking-widest text-gray-500 mb-4 flex items-center">
-                  <FaList className="mr-2" />
-                  Benzer İçerikler
-                </h3>
-                <div className="space-y-3">
-                  {(content.similar?.results || content.recommendations?.results)
-                    ?.slice(0, 5)
-                    .map(item => (
-                      <Link
-                        key={item.id}
-                        to={`/watch/${item.media_type || type}/${item.id}`}
-                        className="flex items-start space-x-3 hover:bg-gray-800 p-2 rounded-lg transition-colors"
-                      >
-                        <img
-                          src={getImageUrl(item.poster_path, 'w92')}
-                          alt={item.title || item.name}
-                          className="w-16 h-24 object-cover rounded"
-                        />
-                        <div className="flex-grow">
-                          <h4 className="text-sm font-medium line-clamp-2">
-                            {item.title || item.name}
-                          </h4>
-                          <p className="text-xs text-gray-400 mt-1">
-                            {new Date(item.release_date || item.first_air_date).getFullYear()}
-                          </p>
-                        </div>
-                      </Link>
-                    ))}
-                </div>
-              </div>
-            </div>
+            </section>
           </div>
         </div>
+
+        <aside className="min-w-0 space-y-6 px-[var(--gutter)] pb-4 sm:px-0">
+          {isTv && seasons.length > 0 && (
+            <section className="surface p-3 sm:p-4 lg:sticky lg:top-6">
+              <div className="mb-3 flex items-center justify-between gap-3">
+                <h2 className="text-sm font-bold">Bölümler</h2>
+                <SeasonSelect
+                  seasons={seasons}
+                  value={season}
+                  onChange={(value) => navigate(getWatchPath(media, 'tv', { season: value, episode: 1 }), { replace: true })}
+                  className="!h-9 max-w-[200px] !text-[13px]"
+                />
+              </div>
+              <div className="no-scrollbar max-h-[420px] overflow-y-auto lg:max-h-[calc(100dvh-160px)]">
+                <EpisodeList
+                  dense
+                  replace
+                  episodes={episodes}
+                  loading={seasonQuery.isLoading}
+                  error={seasonQuery.isError}
+                  current={episode}
+                  getHref={(ep) => getWatchPath(media, 'tv', { season, episode: ep.episode_number })}
+                />
+              </div>
+            </section>
+          )}
+
+          {related.length > 0 && (
+            <section>
+              <h2 className="mb-3 text-sm font-bold">Benzer içerikler</h2>
+              <ul className="grid grid-cols-1 gap-1 xs:grid-cols-2 lg:grid-cols-1">
+                {related.map(item => {
+                  const itemType = item.media_type || type;
+                  return (
+                    <li key={item.id}>
+                      <Link to={getDetailPath(item, itemType)} className="flex items-center gap-3 rounded-lg p-2 hover:bg-white/[0.04]">
+                        <span className="h-[72px] w-12 flex-shrink-0 overflow-hidden rounded-md bg-white/5">
+                          {item.poster_path && <img src={getImageUrl(item.poster_path, 'w92')} alt="" loading="lazy" className="h-full w-full object-cover" />}
+                        </span>
+                        <span className="min-w-0">
+                          <span className="line-clamp-2 text-sm font-semibold">{getTitle(item)}</span>
+                          <span className="mt-0.5 block text-xs text-white/40">
+                            {getMediaLabel(itemType)}{getYear(getReleaseDate(item)) ? ` · ${getYear(getReleaseDate(item))}` : ''}
+                          </span>
+                        </span>
+                      </Link>
+                    </li>
+                  );
+                })}
+              </ul>
+            </section>
+          )}
+        </aside>
       </div>
     </>
   );
