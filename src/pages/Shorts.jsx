@@ -1,9 +1,12 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
-import { FaPlay, FaPause, FaVolumeUp, FaVolumeMute, FaHeart, FaRegHeart, FaBookmark, FaRegBookmark, FaShare, FaFilm, FaTv, FaExclamationTriangle, FaComment } from 'react-icons/fa';
+import { FaPlay, FaPause, FaVolumeUp, FaVolumeMute, FaHeart, FaRegHeart, FaBookmark, FaRegBookmark, FaShare, FaFilm, FaTv, FaExclamationTriangle, FaComment, FaChevronUp, FaChevronDown } from 'react-icons/fa';
 import { useShorts } from '../hooks/useShorts';
-import { shortsService } from '../services/shorts';
+import { createShortSlug, parseShortSlug, shortsService } from '../services/shorts';
+import { getDetailPath, getWatchPath, shareOrCopy } from '../utils/helpers';
+import { useToast } from '../components/UI/Toast';
+import { Spinner } from '../components/UI/Loading';
 import { getImageUrl } from '../services/tmdb';
 import { useAuth } from '../contexts/AuthContext';
 import { likesService, bookmarksService, commentsService } from '../services/supabase';
@@ -13,6 +16,7 @@ import CommentsModal from '../components/UI/CommentsModal';
 
 const ShortsCard = React.memo(({ short, isActive, isNext, isMuted, onToggleMute, user, onOpenComments }) => {
   const navigate = useNavigate();
+  const { toast } = useToast();
   const [isLiked, setIsLiked] = useState(false);
   const [isSaved, setIsSaved] = useState(false);
   const [isPlaying, setIsPlaying] = useState(true);
@@ -160,7 +164,8 @@ const ShortsCard = React.memo(({ short, isActive, isNext, isMuted, onToggleMute,
     e.stopPropagation();
     triggerHaptic(HapticType.MEDIUM, e.currentTarget);
     if (!user) {
-      navigate('/login');
+      toast.info('Beğenmek için giriş yapmalısın');
+      navigate('/login', { state: { from: window.location.pathname } });
       return;
     }
     if (likeLoading) return;
@@ -181,7 +186,8 @@ const ShortsCard = React.memo(({ short, isActive, isNext, isMuted, onToggleMute,
     e.stopPropagation();
     triggerHaptic(HapticType.MEDIUM, e.currentTarget);
     if (!user) {
-      navigate('/login');
+      toast.info('Kaydetmek için giriş yapmalısın');
+      navigate('/login', { state: { from: window.location.pathname } });
       return;
     }
     if (saveLoading) return;
@@ -192,6 +198,7 @@ const ShortsCard = React.memo(({ short, isActive, isNext, isMuted, onToggleMute,
         user.id, short.id, short.media_type, title, short.poster_path
       );
       setIsSaved(bookmarked);
+      toast.success(bookmarked ? 'Profiline kaydedildi' : 'Kayıtlardan çıkarıldı', 2000);
       triggerHaptic(bookmarked ? HapticType.SUCCESS : HapticType.LIGHT);
     } catch (e) {
       console.error('Save error:', e);
@@ -203,26 +210,20 @@ const ShortsCard = React.memo(({ short, isActive, isNext, isMuted, onToggleMute,
   const handleWatch = (e) => {
     e.stopPropagation();
     triggerHaptic(HapticType.HEAVY, e.currentTarget);
-    navigate(`/watch/${short.media_type}/${short.id}`);
+    navigate(getWatchPath(short, short.media_type));
   };
 
   const handleDetails = (e) => {
     e.stopPropagation();
-    navigate(`/${short.media_type}/${short.id}`);
+    navigate(getDetailPath(short, short.media_type));
   };
 
-  const handleShare = (e) => {
+  const handleShare = async (e) => {
     e.stopPropagation();
     triggerHaptic(HapticType.LIGHT, e.currentTarget);
-    if (navigator.share) {
-      navigator.share({
-        title,
-        url: `${window.location.origin}/${short.media_type}/${short.id}`
-      }).then(() => triggerHaptic(HapticType.SUCCESS)).catch(() => {});
-    } else {
-      navigator.clipboard?.writeText(`${window.location.origin}/${short.media_type}/${short.id}`);
-      triggerHaptic(HapticType.SUCCESS);
-    }
+    const result = await shareOrCopy({ title, url: `${window.location.origin}/sahneler/${createShortSlug(short)}` });
+    if (result === 'copied') toast.success('Bağlantı kopyalandı', 2000);
+    if (result === 'shared' || result === 'copied') triggerHaptic(HapticType.SUCCESS);
   };
 
   const handleRetry = (e) => {
@@ -249,7 +250,7 @@ const ShortsCard = React.memo(({ short, isActive, isNext, isMuted, onToggleMute,
               ref={iframeRef}
               src={embedUrl}
               className="reels-iframe"
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
               allowFullScreen
               title={title}
               onLoad={handleIframeLoad}
@@ -288,11 +289,11 @@ const ShortsCard = React.memo(({ short, isActive, isNext, isMuted, onToggleMute,
       <div className="reels-content">
         <div className="reels-info">
           <div className="reels-creator">
-            <div className="reels-poster-small" onClick={handleDetails}>
-              <img src={posterUrl} alt={title} />
-            </div>
+            <button type="button" className="reels-poster-small" onClick={handleDetails} aria-label={`${title} detayları`}>
+              <img src={posterUrl} alt="" />
+            </button>
             <div className="reels-creator-info">
-              <h3 className="reels-title" onClick={handleDetails}>{title}</h3>
+              <button type="button" className="reels-title" onClick={handleDetails}>{title}</button>
               <div className="reels-meta">
                 <span className="reels-badge-inline">
                   {short.media_type === 'movie' ? <><FaFilm /> Film</> : <><FaTv /> Dizi</>}
@@ -328,12 +329,15 @@ const ShortsCard = React.memo(({ short, isActive, isNext, isMuted, onToggleMute,
           <button
             className={`reels-action ${isLiked ? 'active' : ''} ${likeLoading ? 'loading' : ''}`}
             onClick={handleLike}
+            aria-label={isLiked ? 'Beğeniyi kaldır' : 'Beğen'}
+            aria-pressed={isLiked}
           >
             {isLiked ? <FaHeart /> : <FaRegHeart />}
           </button>
           <button
             className="reels-action comment-btn"
             onClick={(e) => { e.stopPropagation(); onOpenComments(short, title); }}
+            aria-label="Yorumlar"
           >
             <FaComment />
             {commentCount > 0 && <span className="reels-action-count">{commentCount}</span>}
@@ -341,30 +345,24 @@ const ShortsCard = React.memo(({ short, isActive, isNext, isMuted, onToggleMute,
           <button
             className={`reels-action ${isSaved ? 'active' : ''} ${saveLoading ? 'loading' : ''}`}
             onClick={handleSave}
+            aria-label={isSaved ? 'Kaydı kaldır' : 'Kaydet'}
+            aria-pressed={isSaved}
           >
             {isSaved ? <FaBookmark /> : <FaRegBookmark />}
           </button>
-          <button className="reels-action" onClick={handleShare}>
+          <button className="reels-action" onClick={handleShare} aria-label="Paylaş">
             <FaShare />
           </button>
           <button
             className="reels-action sound-btn"
             onClick={(e) => { e.stopPropagation(); onToggleMute(); }}
+            aria-label={isMuted ? 'Sesi aç' : 'Sesi kapat'}
           >
             {isMuted ? <FaVolumeMute /> : <FaVolumeUp />}
           </button>
         </div>
       </div>
 
-      {/* Progress indicator - her video için sıfırdan başlar */}
-      {isActive && isLoaded && (
-        <div className="reels-progress-container">
-          <div 
-            key={`progress-${short.id}-${short.media_type}`} 
-            className="reels-progress-bar" 
-          />
-        </div>
-      )}
     </div>
   );
 });
@@ -384,7 +382,9 @@ const Shorts = () => {
     toggleMute,
     prependShort,
     hasContent,
-    cleanupOldItems
+    cleanupOldItems,
+    error,
+    retry
   } = useShorts();
 
   const { user } = useAuth();
@@ -418,31 +418,11 @@ const Shorts = () => {
     setCommentsModal({ isOpen: false, short: null, title: '' });
   }, []);
 
-  const createSlug = useCallback((short) => {
-    if (!short) return null;
-    const title = (short.title || short.name || '')
-      .toLowerCase()
-      .replace(/[^a-z0-9\s-ğüşıöçĞÜŞİÖÇ]/gi, '')
-      .replace(/\s+/g, '-')
-      .substring(0, 50);
-    return `${short.id}-${short.media_type}-${title}`;
-  }, []);
-
-  const parseSlug = useCallback((slugStr) => {
-    if (!slugStr) return null;
-    const parts = slugStr.split('-');
-    if (parts.length < 2) return null;
-    const id = parseInt(parts[0], 10);
-    const mediaType = parts[1];
-    if (isNaN(id) || !['movie', 'tv'].includes(mediaType)) return null;
-    return { id, mediaType };
-  }, []);
-
   // Initial slug processing
   useEffect(() => {
     const processInitialSlug = async () => {
       if (slug && !initialSlugProcessed.current && isReady) {
-        const parsed = parseSlug(slug);
+        const parsed = parseShortSlug(slug);
         if (parsed) {
           const targetIndex = shorts.findIndex(
             s => s.id === parsed.id && s.media_type === parsed.mediaType
@@ -468,12 +448,12 @@ const Shorts = () => {
     };
     
     processInitialSlug();
-  }, [isReady, slug, shorts, currentIndex, goToIndex, prependShort, parseSlug]);
+  }, [isReady, slug, shorts, currentIndex, goToIndex, prependShort]);
 
   // URL update
   useEffect(() => {
     if (isReady && hasContent && shorts[currentIndex]) {
-      const newSlug = createSlug(shorts[currentIndex]);
+      const newSlug = createShortSlug(shorts[currentIndex]);
       if (newSlug) {
         const currentPath = window.location.pathname;
         const expectedPath = `/sahneler/${newSlug}`;
@@ -482,7 +462,7 @@ const Shorts = () => {
         }
       }
     }
-  }, [currentIndex, shorts, isReady, hasContent, createSlug]);
+  }, [currentIndex, shorts, isReady, hasContent]);
 
   // Scroll handler with momentum
   const handleScroll = useCallback((direction) => {
@@ -491,14 +471,6 @@ const Shorts = () => {
     
     lastScrollTime.current = now;
     isTransitioning.current = true;
-    
-    // Haptic feedback simulation - visual pulse
-    if (containerRef.current) {
-      containerRef.current.classList.add('reels-haptic');
-      setTimeout(() => {
-        containerRef.current?.classList.remove('reels-haptic');
-      }, 100);
-    }
     
     if (direction === 'down') {
       goToNext();
@@ -673,13 +645,23 @@ const Shorts = () => {
   if (!isReady || !hasContent) {
     return (
       <div className="reels-container">
-        <div className="reels-skeleton">
-          <div className="reels-skeleton-shimmer" />
-          <div className="reels-skeleton-content">
-            <div className="reels-skeleton-badge" />
-            <div className="reels-skeleton-title" />
-            <div className="reels-skeleton-meta" />
-            <div className="reels-skeleton-button" />
+        <Helmet>
+          <title>Sahneler - SINEFIX</title>
+        </Helmet>
+        <div className="reels-feed">
+          <div className="reels-status">
+            {error ? (
+              <>
+                <FaExclamationTriangle className="text-3xl text-yellow-500" />
+                <p className="text-sm text-white/60">{error}</p>
+                <button type="button" className="btn btn-primary btn-sm" onClick={retry}>Tekrar dene</button>
+              </>
+            ) : (
+              <>
+                <Spinner />
+                <p className="text-sm text-white/50">Sahneler hazırlanıyor…</p>
+              </>
+            )}
           </div>
         </div>
       </div>
@@ -694,7 +676,7 @@ const Shorts = () => {
   return (
     <>
       <Helmet>
-        <title>Sahneler | SineFix</title>
+        <title>Sahneler - SINEFIX</title>
         <meta name="description" content="Film ve dizi sahneleri" />
       </Helmet>
 
@@ -730,18 +712,17 @@ const Shorts = () => {
           </div>
         </div>
 
-        {/* Swipe direction indicator */}
-        {isDragging && swipeDirection && (
-          <div className={`reels-swipe-indicator ${swipeDirection}`}>
-            <span>{swipeDirection === 'up' ? '↑' : '↓'}</span>
-          </div>
-        )}
+        <div className="reels-nav">
+          <button type="button" className="icon-btn bordered lg" onClick={() => handleScroll('up')} disabled={currentIndex === 0} aria-label="Önceki sahne">
+            <FaChevronUp />
+          </button>
+          <button type="button" className="icon-btn bordered lg" onClick={() => handleScroll('down')} aria-label="Sonraki sahne">
+            <FaChevronDown />
+          </button>
+        </div>
 
-        {/* Swipe hint - sadece ilk video için göster */}
         {currentIndex === 0 && !isDragging && (
-          <div className="reels-swipe-hint visible">
-            <span>↑ Kaydır ↓</span>
-          </div>
+          <div className="reels-swipe-hint">Sonraki sahne için yukarı kaydır</div>
         )}
 
         {/* Preload next thumbnail */}

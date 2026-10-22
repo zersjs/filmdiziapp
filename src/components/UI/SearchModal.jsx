@@ -1,265 +1,187 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { FaSearch, FaTimes, FaFilm, FaTv, FaStar } from 'react-icons/fa';
-import { Link } from 'react-router-dom';
-import { LazyLoadImage } from 'react-lazy-load-image-component';
-import { searchService, getImageUrl } from '../../services/tmdb';
-import { formatRating, getYear, createSlug } from '../../utils/helpers';
+import React, { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
+import { useNavigate } from 'react-router-dom';
+import { FaSearch, FaTimes, FaFilm, FaTv, FaStar, FaArrowRight } from 'react-icons/fa';
+import { getImageUrl } from '../../services/tmdb';
+import { useDebounce, useSearch } from '../../hooks';
+import { getDetailPath, getMediaLabel, getReleaseDate, getTitle, getYear } from '../../utils/helpers';
+import { useBodyScrollLock } from './Modal';
+import { Spinner } from './Loading';
+
+export const QUICK_GENRES = [
+  { name: 'Aksiyon', path: '/movies?genre=28' },
+  { name: 'Komedi', path: '/movies?genre=35' },
+  { name: 'Dram', path: '/movies?genre=18' },
+  { name: 'Bilim Kurgu', path: '/movies?genre=878' },
+  { name: 'Korku', path: '/movies?genre=27' },
+  { name: 'Animasyon', path: '/movies?genre=16' },
+  { name: 'Suç', path: '/series?genre=80' },
+  { name: 'Belgesel', path: '/movies?genre=99' },
+];
 
 const SearchModal = ({ isOpen, onClose }) => {
+  const navigate = useNavigate();
+  const inputRef = useRef(null);
+  const listRef = useRef(null);
   const [query, setQuery] = useState('');
-  const [results, setResults] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [selectedIndex, setSelectedIndex] = useState(-1);
-  const inputRef = useRef();
-  const resultsRef = useRef();
-  const debounceRef = useRef();
+  const [selected, setSelected] = useState(-1);
+  const debounced = useDebounce(query.trim(), 300);
+  const { data, isFetching, isError } = useSearch(isOpen ? debounced : '');
+
+  const results = debounced.length >= 2
+    ? (data?.results || []).filter(item => item.media_type === 'movie' || item.media_type === 'tv').slice(0, 8)
+    : [];
+
+  useBodyScrollLock(isOpen);
 
   useEffect(() => {
-    if (debounceRef.current) {
-      clearTimeout(debounceRef.current);
-    }
-
-    if (query.trim().length > 2) {
-      debounceRef.current = setTimeout(() => {
-        performSearch(query.trim());
-      }, 300);
-    } else {
-      setResults([]);
-      setLoading(false);
-    }
-
-    return () => {
-      if (debounceRef.current) {
-        clearTimeout(debounceRef.current);
-      }
-    };
-  }, [query]);
-
-  useEffect(() => {
-    if (isOpen && inputRef.current) {
-      inputRef.current.focus();
+    if (isOpen) {
+      setQuery('');
+      setSelected(-1);
+      requestAnimationFrame(() => inputRef.current?.focus());
     }
   }, [isOpen]);
 
+  useEffect(() => setSelected(-1), [debounced]);
+
   useEffect(() => {
-    const handleKeyDown = (e) => {
-      if (!isOpen) return;
+    listRef.current?.querySelector('[data-selected="true"]')?.scrollIntoView({ block: 'nearest' });
+  }, [selected]);
 
-      switch (e.key) {
-        case 'Escape':
-          onClose();
-          break;
-        case 'ArrowDown':
-          e.preventDefault();
-          setSelectedIndex(prev => 
-            prev < results.length - 1 ? prev + 1 : prev
-          );
-          break;
-        case 'ArrowUp':
-          e.preventDefault();
-          setSelectedIndex(prev => prev > 0 ? prev - 1 : -1);
-          break;
-        case 'Enter':
-          e.preventDefault();
-          if (selectedIndex >= 0 && results[selectedIndex]) {
-            const item = results[selectedIndex];
-            const slug = createSlug(item.title || item.name);
-            window.location.href = `/${item.media_type}/${item.id}/${slug}`;
-          }
-          break;
-      }
-    };
-
-    document.addEventListener('keydown', handleKeyDown);
-    return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen, results, selectedIndex, onClose]);
-
-  const performSearch = async (searchQuery) => {
-    try {
-      setLoading(true);
-      const response = await searchService.multi(searchQuery);
-      const filteredResults = response.data.results
-        .filter(item => item.media_type === 'movie' || item.media_type === 'tv')
-        .slice(0, 8);
-      setResults(filteredResults);
-    } catch (error) {
-      console.error('Search error:', error);
-      setResults([]);
-    } finally {
-      setLoading(false);
-    }
+  const go = (path) => {
+    onClose();
+    navigate(path);
   };
 
-  const handleResultClick = (item) => {
-    const slug = createSlug(item.title || item.name);
-    onClose();
-    
-    window.location.href = `/${item.media_type}/${item.id}/${slug}`;
+  const showAll = () => {
+    if (query.trim()) go(`/search?q=${encodeURIComponent(query.trim())}`);
+  };
+
+  const onKeyDown = (event) => {
+    if (event.key === 'Escape') {
+      event.preventDefault();
+      onClose();
+    } else if (event.key === 'ArrowDown') {
+      event.preventDefault();
+      setSelected(i => Math.min(i + 1, results.length - 1));
+    } else if (event.key === 'ArrowUp') {
+      event.preventDefault();
+      setSelected(i => Math.max(i - 1, -1));
+    } else if (event.key === 'Enter') {
+      event.preventDefault();
+      if (selected >= 0 && results[selected]) go(getDetailPath(results[selected]));
+      else showAll();
+    }
   };
 
   if (!isOpen) return null;
 
-  return (
-    <div className="fixed inset-0 z-[10000] flex items-start justify-center pt-[10vh] sm:pt-[15vh]">
-      <div 
-        className="absolute inset-0 bg-black/90 backdrop-blur-xl animate-fade-in"
-        onClick={onClose}
-      />
+  const tooShort = query.trim().length > 0 && query.trim().length < 2;
+  const waiting = debounced !== query.trim() || isFetching;
 
-      <div className="relative w-full max-w-3xl mx-4 animate-fade-in-up">
-        {/* Search header & Input */}
-        <div className="relative group">
-          <div className="absolute inset-0 bg-white/5 blur-2xl rounded-2xl group-hover:bg-white/10 transition-all duration-500" />
-          <div className="relative bg-[#050505] border border-white/10 rounded-2xl shadow-2xl overflow-hidden focus-within:border-white/30 transition-all duration-300">
-            <div className="flex items-center px-6 py-5">
-              <FaSearch className="text-gray-500 text-xl" />
-              <input
-                ref={inputRef}
-                type="text"
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                placeholder="FİLM, DİZİ VEYA OYUNCU ARA..."
-                className="flex-1 bg-transparent border-none text-white placeholder-gray-700 text-sm sm:text-base ml-4 uppercase tracking-[0.2em] focus:outline-none"
-              />
-              <button
-                onClick={onClose}
-                className="ml-4 w-8 h-8 flex items-center justify-center rounded-full bg-white/5 text-gray-400 hover:text-white hover:bg-white/10 transition-all"
-              >
-                <FaTimes className="text-sm" />
-              </button>
-            </div>
+  return createPortal(
+    <div className="modal-overlay search-overlay" onMouseDown={(event) => event.target === event.currentTarget && onClose()}>
+      <div className="search-panel" role="dialog" aria-modal="true" aria-label="Arama" onKeyDown={onKeyDown}>
+        <div className="flex items-center gap-3 border-b border-white/[0.06] px-4 py-3 sm:px-5">
+          <FaSearch className="flex-shrink-0 text-white/40" />
+          <input
+            ref={inputRef}
+            type="search"
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            placeholder="Film veya dizi ara…"
+            className="h-10 min-w-0 flex-1 bg-transparent text-base text-white placeholder-white/30 focus:outline-none"
+            aria-autocomplete="list"
+            enterKeyHint="search"
+          />
+          {waiting && debounced.length >= 2 && <Spinner className="!h-4 !w-4" />}
+          <button type="button" onClick={onClose} className="icon-btn -mr-2" aria-label="Aramayı kapat">
+            <FaTimes />
+          </button>
+        </div>
 
-            {/* Content Area */}
-            <div className="max-h-[60vh] overflow-y-auto scrollbar-hide border-t border-white/5">
-              {loading && (
-                <div className="p-20 text-center">
-                  <div className="inline-block animate-spin h-8 w-8 border-2 border-white/10 border-t-white rounded-full"></div>
-                </div>
-              )}
-
-              {!loading && query.trim() === '' && (
-                <div className="p-8">
-                  <p className="text-[10px] uppercase tracking-[0.3em] text-gray-600 mb-6 font-bold">Popüler Kategoriler</p>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                    {[
-                      { name: 'Aksiyon', path: '/genre/movie/28' },
-                      { name: 'Korku', path: '/genre/movie/27' },
-                      { name: 'Bilim Kurgu', path: '/genre/movie/878' },
-                      { name: 'Komedi', path: '/genre/movie/35' },
-                      { name: 'Dram', path: '/genre/movie/18' },
-                      { name: 'Animasyon', path: '/genre/movie/16' }
-                    ].map(cat => (
-                      <Link 
-                        key={cat.name} 
-                        to={cat.path} 
-                        onClick={onClose}
-                        className="p-4 rounded-xl bg-white/5 border border-white/5 hover:bg-white/10 hover:border-white/20 text-center transition-all group"
-                      >
-                        <span className="text-[10px] uppercase tracking-widest text-gray-400 group-hover:text-white">{cat.name}</span>
-                      </Link>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {!loading && query.trim().length > 0 && query.trim().length <= 2 && (
-                <div className="p-20 text-center">
-                  <p className="text-gray-600 uppercase tracking-[0.3em] text-[10px] animate-pulse">
-                    En az 3 karakter girin...
-                  </p>
-                </div>
-              )}
-
-              {!loading && results.length === 0 && query.trim().length > 2 && (
-                <div className="p-20 text-center">
-                  <p className="text-gray-600 uppercase tracking-[0.3em] text-[10px]">
-                    "{query}" İÇİN SONUÇ BULUNAMADI
-                  </p>
-                </div>
-              )}
-
-              {!loading && results.length > 0 && (
-                <div className="p-3 space-y-2">
-                  {results.map((item, index) => (
-                    <div
-                      key={item.id}
-                      onClick={() => handleResultClick(item)}
-                      className={`group flex items-center p-3 sm:p-4 rounded-xl cursor-pointer transition-all duration-300 ${
-                        selectedIndex === index
-                          ? 'bg-white text-black translate-x-2'
-                          : 'hover:bg-white/5 text-gray-400'
-                      }`}
-                    >
-                      <div className="flex-shrink-0 w-12 h-18 sm:w-14 sm:h-20 bg-white/5 rounded-lg overflow-hidden shadow-xl border border-white/10">
-                        {item.poster_path ? (
-                          <LazyLoadImage
-                            src={getImageUrl(item.poster_path, 'w92')}
-                            alt={item.title || item.name}
-                            className={`w-full h-full object-cover transition-all duration-500 ${
-                              selectedIndex === index ? 'grayscale-0' : 'grayscale group-hover:grayscale-0'
-                            }`}
-                          />
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center text-xl text-gray-800">
-                            {item.media_type === 'movie' ? <FaFilm /> : <FaTv />}
-                          </div>
-                        )}
-                      </div>
-
-                      <div className="flex-1 ml-5 min-w-0">
-                        <div className="flex items-center justify-between mb-2">
-                          <h3 className={`font-black text-sm sm:text-base uppercase tracking-tight truncate ${
-                            selectedIndex === index ? 'text-black' : 'text-white group-hover:text-white'
-                          }`}>
-                            {item.title || item.name}
-                          </h3>
-                          <span className={`text-[9px] font-bold uppercase tracking-widest px-2 py-1 rounded bg-black/20 ${
-                            selectedIndex === index ? 'bg-black/10 text-black/60' : 'text-gray-500'
-                          }`}>
-                            {item.media_type === 'movie' ? 'FİLM' : 'DİZİ'}
-                          </span>
-                        </div>
-                        
-                        <div className={`flex items-center space-x-4 text-[10px] font-medium uppercase tracking-tighter ${
-                          selectedIndex === index ? 'text-black/50' : 'text-gray-500 group-hover:text-gray-400'
-                        }`}>
-                          <span className="flex items-center gap-1.5 ring-1 ring-inset ring-white/10 px-2 py-0.5 rounded">
-                            {getYear(item.release_date || item.first_air_date)}
-                          </span>
-                          <div className="flex items-center space-x-1.5">
-                            <FaStar className={selectedIndex === index ? 'text-black/60' : 'text-gray-600'} />
-                            <span className="font-bold">{formatRating(item.vote_average)}</span>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            {/* Footer */}
-            <div className="p-4 bg-white/5 border-t border-white/5 backdrop-blur-md">
-              <div className="flex items-center justify-between pointer-events-none">
-                <div className="flex items-center space-x-6 text-[9px] font-bold uppercase tracking-[0.2em] text-gray-500">
-                  <span className="flex items-center gap-2"><div className="w-1.5 h-1.5 rounded-full bg-gray-700"/> NAV</span>
-                  <span className="flex items-center gap-2"><div className="w-1.5 h-1.5 rounded-full bg-gray-700"/> SELECT</span>
-                  <span className="flex items-center gap-2"><div className="w-1.5 h-1.5 rounded-full bg-gray-700"/> CLOSE</span>
-                </div>
-                <LogoShort />
+        <div ref={listRef} className="flex-1 overflow-y-auto overscroll-contain p-2 sm:p-3">
+          {query.trim() === '' && (
+            <div className="p-3">
+              <p className="mb-3 text-xs font-semibold text-white/40">Türlere göz at</p>
+              <div className="flex flex-wrap gap-2">
+                {QUICK_GENRES.map(genre => (
+                  <button key={genre.name} type="button" className="chip" onClick={() => go(genre.path)}>
+                    {genre.name}
+                  </button>
+                ))}
               </div>
             </div>
-          </div>
+          )}
+
+          {tooShort && <p className="p-6 text-center text-sm text-white/40">Aramak için en az 2 karakter yazın.</p>}
+
+          {isError && <p className="p-6 text-center text-sm text-white/40">Arama yapılamadı. Bağlantınızı kontrol edin.</p>}
+
+          {!waiting && !isError && debounced.length >= 2 && results.length === 0 && (
+            <p className="p-6 text-center text-sm text-white/40">“{debounced}” için sonuç bulunamadı.</p>
+          )}
+
+          {results.length > 0 && (
+            <ul role="listbox" aria-label="Arama sonuçları">
+              {results.map((item, index) => {
+                const year = getYear(getReleaseDate(item));
+                return (
+                  <li key={`${item.media_type}-${item.id}`}>
+                    <button
+                      type="button"
+                      role="option"
+                      aria-selected={selected === index}
+                      data-selected={selected === index}
+                      className={`search-result ${selected === index ? 'selected' : ''}`}
+                      onMouseEnter={() => setSelected(index)}
+                      onClick={() => go(getDetailPath(item))}
+                    >
+                      <span className="search-result-poster">
+                        {item.poster_path ? (
+                          <img src={getImageUrl(item.poster_path, 'w92')} alt="" loading="lazy" />
+                        ) : item.media_type === 'tv' ? <FaTv /> : <FaFilm />}
+                      </span>
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate text-[15px] font-semibold">{getTitle(item)}</span>
+                        <span className="mt-1 flex items-center gap-2 text-xs text-white/45">
+                          <span>{getMediaLabel(item.media_type)}</span>
+                          {year && <span>· {year}</span>}
+                          {item.vote_average > 0 && (
+                            <span className="inline-flex items-center gap-1 text-[var(--star)]">
+                              · <FaStar className="text-[9px]" /> {item.vote_average.toFixed(1)}
+                            </span>
+                          )}
+                        </span>
+                      </span>
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </div>
+
+        {query.trim().length >= 2 && (
+          <button
+            type="button"
+            onClick={showAll}
+            className="flex items-center justify-between gap-3 border-t border-white/[0.06] px-5 py-3.5 text-sm font-semibold text-white/80 hover:bg-white/[0.04] hover:text-white"
+          >
+            <span className="truncate">“{query.trim()}” için tüm sonuçlar</span>
+            <FaArrowRight className="flex-shrink-0 text-xs" />
+          </button>
+        )}
+
+        <div className="hidden items-center gap-4 border-t border-white/[0.06] px-5 py-2.5 text-xs text-white/35 sm:flex">
+          <span className="flex items-center gap-1.5"><kbd>↑</kbd><kbd>↓</kbd> gezin</span>
+          <span className="flex items-center gap-1.5"><kbd>Enter</kbd> aç</span>
+          <span className="flex items-center gap-1.5"><kbd>Esc</kbd> kapat</span>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };
-
-const LogoShort = () => (
-  <div className="flex items-center text-[10px] font-black italic tracking-tighter text-gray-700">
-    SINEFIX <span className="text-gray-800 ml-1">MXXVI</span>
-  </div>
-);
 
 export default SearchModal;

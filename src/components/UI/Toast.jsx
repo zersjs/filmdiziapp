@@ -1,38 +1,76 @@
-import React, { useState, useEffect, createContext, useContext } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { FaCheck, FaTimes, FaExclamationTriangle, FaInfoCircle } from 'react-icons/fa';
 
-const ToastContext = createContext();
+const ToastContext = createContext(null);
+
+const ICONS = {
+  success: FaCheck,
+  error: FaTimes,
+  warning: FaExclamationTriangle,
+  info: FaInfoCircle,
+};
+
+const MAX_TOASTS = 3;
 
 export const ToastProvider = ({ children }) => {
   const [toasts, setToasts] = useState([]);
+  const timers = useRef(new Map());
 
-  const addToast = (message, type = 'info', duration = 5000) => {
-    const id = Date.now() + Math.random();
-    const toast = { id, message, type, duration };
-    
-    setToasts(prev => [...prev, toast]);
+  const remove = useCallback((id) => {
+    setToasts(prev => prev.map(t => (t.id === id ? { ...t, leaving: true } : t)));
+    setTimeout(() => setToasts(prev => prev.filter(t => t.id !== id)), 200);
+    clearTimeout(timers.current.get(id));
+    timers.current.delete(id);
+  }, []);
 
-    if (duration > 0) {
-      setTimeout(() => {
-        removeToast(id);
-      }, duration);
-    }
-
+  const add = useCallback((message, type = 'info', duration = 3000) => {
+    const id = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    setToasts(prev => {
+      // Aynı mesaj art arda gelirse çoğaltma
+      const rest = prev.filter(t => t.message !== message);
+      return [...rest, { id, message, type }].slice(-MAX_TOASTS);
+    });
+    if (duration > 0) timers.current.set(id, setTimeout(() => remove(id), duration));
     return id;
-  };
+  }, [remove]);
 
-  const removeToast = (id) => {
-    setToasts(prev => prev.filter(toast => toast.id !== id));
-  };
+  useEffect(() => {
+    const pending = timers.current;
+    return () => pending.forEach(clearTimeout);
+  }, []);
 
-  const clearAllToasts = () => {
-    setToasts([]);
-  };
+  const value = useMemo(() => ({
+    toast: {
+      success: (message, duration) => add(message, 'success', duration),
+      error: (message, duration) => add(message, 'error', duration),
+      warning: (message, duration) => add(message, 'warning', duration),
+      info: (message, duration) => add(message, 'info', duration),
+    },
+    removeToast: remove,
+  }), [add, remove]);
 
   return (
-    <ToastContext.Provider value={{ addToast, removeToast, clearAllToasts }}>
+    <ToastContext.Provider value={value}>
       {children}
-      <ToastContainer toasts={toasts} onRemove={removeToast} />
+      <div className="toast-region" role="status" aria-live="polite">
+        {toasts.map(({ id, message, type, leaving }) => {
+          const Icon = ICONS[type] || FaInfoCircle;
+          return (
+            <div key={id} className={`toast ${type} ${leaving ? 'leaving' : ''}`}>
+              <Icon className="toast-icon" />
+              <span className="flex-1">{message}</span>
+              <button
+                type="button"
+                onClick={() => remove(id)}
+                className="text-white/40 hover:text-white p-1 -m-1"
+                aria-label="Bildirimi kapat"
+              >
+                <FaTimes size={11} />
+              </button>
+            </div>
+          );
+        })}
+      </div>
     </ToastContext.Provider>
   );
 };
@@ -42,101 +80,5 @@ export const useToast = () => {
   if (!context) {
     throw new Error('useToast must be used within a ToastProvider');
   }
-
-  const { addToast, removeToast, clearAllToasts } = context;
-
-  return {
-    toast: {
-      success: (message, duration) => addToast(message, 'success', duration),
-      error: (message, duration) => addToast(message, 'error', duration),
-      warning: (message, duration) => addToast(message, 'warning', duration),
-      info: (message, duration) => addToast(message, 'info', duration),
-    },
-    removeToast,
-    clearAllToasts
-  };
-};
-
-const ToastContainer = ({ toasts, onRemove }) => {
-  if (toasts.length === 0) return null;
-
-  return (
-    <div className="fixed top-4 right-4 z-[9999] space-y-2">
-      {toasts.map(toast => (
-        <ToastItem
-          key={toast.id}
-          toast={toast}
-          onRemove={() => onRemove(toast.id)}
-        />
-      ))}
-    </div>
-  );
-};
-
-const ToastItem = ({ toast, onRemove }) => {
-  const [isVisible, setIsVisible] = useState(false);
-  const [isRemoving, setIsRemoving] = useState(false);
-
-  useEffect(() => {
-    
-    setTimeout(() => setIsVisible(true), 10);
-  }, []);
-
-  const handleRemove = () => {
-    setIsRemoving(true);
-    setTimeout(onRemove, 300);
-  };
-
-  const getToastStyles = () => {
-    const baseStyles = 'flex items-center p-4 rounded-lg shadow-lg backdrop-blur-sm border max-w-sm';
-    
-    switch (toast.type) {
-      case 'success':
-        return `${baseStyles} bg-green-900/90 border-green-700 text-green-100`;
-      case 'error':
-        return `${baseStyles} bg-red-900/90 border-red-700 text-red-100`;
-      case 'warning':
-        return `${baseStyles} bg-yellow-900/90 border-yellow-700 text-yellow-100`;
-      default:
-        return `${baseStyles} bg-blue-900/90 border-blue-700 text-blue-100`;
-    }
-  };
-
-  const getIcon = () => {
-    switch (toast.type) {
-      case 'success':
-        return <FaCheck className="text-green-400" />;
-      case 'error':
-        return <FaTimes className="text-red-400" />;
-      case 'warning':
-        return <FaExclamationTriangle className="text-yellow-400" />;
-      default:
-        return <FaInfoCircle className="text-blue-400" />;
-    }
-  };
-
-  return (
-    <div
-      className={`transform transition-all duration-300 ${
-        isVisible && !isRemoving
-          ? 'translate-x-0 opacity-100'
-          : 'translate-x-full opacity-0'
-      }`}
-    >
-      <div className={getToastStyles()}>
-        <div className="flex-shrink-0 mr-3">
-          {getIcon()}
-        </div>
-        <div className="flex-1 text-sm font-medium">
-          {toast.message}
-        </div>
-        <button
-          onClick={handleRemove}
-          className="flex-shrink-0 ml-3 text-gray-400 hover:text-white transition-colors"
-        >
-          <FaTimes size={12} />
-        </button>
-      </div>
-    </div>
-  );
+  return context;
 };

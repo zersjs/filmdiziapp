@@ -1,138 +1,110 @@
-import React, { useState } from 'react';
-import { LazyLoadImage } from 'react-lazy-load-image-component';
+import React, { useCallback, useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { FaTimes, FaChevronLeft, FaChevronRight } from 'react-icons/fa';
 import { getImageUrl } from '../../services/tmdb';
-import 'react-lazy-load-image-component/src/effects/blur.css';
+import { useBodyScrollLock, useEscapeKey } from './Modal';
+
+const TABS = [
+  { id: 'backdrops', label: 'Sahneler' },
+  { id: 'posters', label: 'Posterler' },
+  { id: 'logos', label: 'Logolar' },
+];
+
+const MAX_IMAGES = 24;
 
 const ImageGallery = ({ images, title }) => {
-  const [selectedImage, setSelectedImage] = useState(null);
-  const [activeTab, setActiveTab] = useState('backdrops');
+  const tabs = TABS
+    .map(tab => ({ ...tab, count: Math.min(images?.[tab.id]?.length || 0, MAX_IMAGES) }))
+    .filter(tab => tab.count > 0);
+  const [activeTab, setActiveTab] = useState(tabs[0]?.id);
+  const [index, setIndex] = useState(null);
 
-  const tabs = [
-    { id: 'backdrops', label: 'Arka Planlar', count: images.backdrops?.length || 0 },
-    { id: 'posters', label: 'Posterler', count: images.posters?.length || 0 },
-    { id: 'logos', label: 'Logolar', count: images.logos?.length || 0 }
-  ].filter(tab => tab.count > 0);
+  const current = (images?.[activeTab] || []).slice(0, MAX_IMAGES);
+  const isOpen = index !== null;
 
-  const currentImages = images[activeTab] || [];
+  const go = useCallback((delta) => {
+    setIndex(i => (i === null ? i : Math.min(Math.max(i + delta, 0), current.length - 1)));
+  }, [current.length]);
 
-  const openModal = (index) => {
-    setSelectedImage(index);
-  };
+  useBodyScrollLock(isOpen);
+  useEscapeKey(isOpen, () => setIndex(null));
 
-  const closeModal = () => {
-    setSelectedImage(null);
-  };
-
-  const nextImage = () => {
-    if (selectedImage < currentImages.length - 1) {
-      setSelectedImage(selectedImage + 1);
-    }
-  };
-
-  const prevImage = () => {
-    if (selectedImage > 0) {
-      setSelectedImage(selectedImage - 1);
-    }
-  };
+  useEffect(() => {
+    if (!isOpen) return undefined;
+    const onKey = (event) => {
+      if (event.key === 'ArrowRight') go(1);
+      if (event.key === 'ArrowLeft') go(-1);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [isOpen, go]);
 
   if (tabs.length === 0) return null;
 
+  const isPoster = activeTab === 'posters';
+  const isLogo = activeTab === 'logos';
+
   return (
-    <div>
-      <h2 className="text-2xl font-bold mb-4">Görseller</h2>
-      
-      <div className="flex space-x-6 mb-6 border-b border-gray-800">
-        {tabs.map(tab => (
+    <section>
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+        <h2 className="section-title">Görseller</h2>
+        {tabs.length > 1 && (
+          <div className="segmented">
+            {tabs.map(tab => (
+              <button key={tab.id} type="button" className={activeTab === tab.id ? 'active' : ''} onClick={() => setActiveTab(tab.id)}>
+                {tab.label} <span className="opacity-60">{tab.count}</span>
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <div className={`grid gap-3 ${isPoster ? 'grid-cols-3 sm:grid-cols-4 lg:grid-cols-6' : 'grid-cols-1 xs:grid-cols-2 lg:grid-cols-3'}`}>
+        {current.map((image, i) => (
           <button
-            key={tab.id}
-            onClick={() => setActiveTab(tab.id)}
-            className={`pb-3 px-1 transition-colors relative ${
-              activeTab === tab.id
-                ? 'text-white border-b-2 border-white'
-                : 'text-gray-400 hover:text-white'
-            }`}
+            key={image.file_path}
+            type="button"
+            onClick={() => setIndex(i)}
+            className={`group relative overflow-hidden rounded-xl bg-[#111] ${isPoster ? 'aspect-[2/3]' : 'aspect-video'} ${isLogo ? 'p-6' : ''}`}
+            aria-label={`${title} görsel ${i + 1}`}
           >
-            {tab.label}
-            <span className="ml-2 text-sm">({tab.count})</span>
+            <img
+              src={getImageUrl(image.file_path, isPoster ? 'w342' : 'w780')}
+              alt=""
+              loading="lazy"
+              className={`h-full w-full transition-transform duration-500 group-hover:scale-105 ${isLogo ? 'object-contain' : 'object-cover'}`}
+            />
           </button>
         ))}
       </div>
 
-      <div className={`grid gap-4 ${
-        activeTab === 'posters' 
-          ? 'grid-cols-3 sm:grid-cols-4 md:grid-cols-6' 
-          : 'grid-cols-1 sm:grid-cols-2 md:grid-cols-3'
-      }`}>
-        {currentImages.slice(0, 18).map((image, index) => (
-          <div
-            key={image.file_path}
-            onClick={() => openModal(index)}
-            className={`relative cursor-pointer group overflow-hidden rounded-lg bg-gray-900 transition-all duration-300 hover:shadow-2xl hover:shadow-white/10 ${
-              activeTab === 'posters' ? 'aspect-[2/3]' : 'aspect-video'
-            }`}
-          >
-            <LazyLoadImage
-              src={getImageUrl(image.file_path, activeTab === 'posters' ? 'w342' : 'w780')}
-              alt={`${title} ${activeTab} ${index + 1}`}
-              effect="blur"
-              className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110"
-            />
-            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors duration-300" />
-            <div className="absolute inset-0 border-2 border-transparent group-hover:border-white/30 transition-colors duration-300 rounded-lg" />
-          </div>
-        ))}
-      </div>
-
-      {selectedImage !== null && (
-        <div 
-          className="fixed inset-0 bg-black/95 z-[10000] flex items-center justify-center p-4"
-          onClick={closeModal}
-        >
-          <button
-            className="absolute top-4 right-4 text-white/80 hover:text-white text-2xl"
-            onClick={closeModal}
-          >
+      {isOpen && current[index] && createPortal(
+        <div className="modal-overlay !p-0" onMouseDown={(event) => event.target === event.currentTarget && setIndex(null)}>
+          <button type="button" className="icon-btn bordered absolute right-4 top-4 z-10" onClick={() => setIndex(null)} aria-label="Kapat">
             <FaTimes />
           </button>
-
-          {selectedImage > 0 && (
-            <button
-              className="absolute left-4 text-white/80 hover:text-white text-3xl"
-              onClick={(e) => {
-                e.stopPropagation();
-                prevImage();
-              }}
-            >
+          {index > 0 && (
+            <button type="button" className="icon-btn bordered lg absolute left-3 top-1/2 z-10 -translate-y-1/2" onClick={() => go(-1)} aria-label="Önceki">
               <FaChevronLeft />
             </button>
           )}
-
-          {selectedImage < currentImages.length - 1 && (
-            <button
-              className="absolute right-4 text-white/80 hover:text-white text-3xl"
-              onClick={(e) => {
-                e.stopPropagation();
-                nextImage();
-              }}
-            >
+          {index < current.length - 1 && (
+            <button type="button" className="icon-btn bordered lg absolute right-3 top-1/2 z-10 -translate-y-1/2" onClick={() => go(1)} aria-label="Sonraki">
               <FaChevronRight />
             </button>
           )}
-
           <img
-            src={getImageUrl(currentImages[selectedImage].file_path, 'original')}
-            alt={`${title} ${activeTab} ${selectedImage + 1}`}
-            className="max-w-full max-h-full object-contain"
-            onClick={(e) => e.stopPropagation()}
+            src={getImageUrl(current[index].file_path, 'original')}
+            alt={`${title} görsel ${index + 1}`}
+            className="max-h-[85dvh] max-w-[calc(100%-32px)] rounded-lg object-contain"
           />
-
-          <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 text-white/80">
-            {selectedImage + 1} / {currentImages.length}
+          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 rounded-full bg-black/60 px-3 py-1 text-xs text-white/80">
+            {index + 1} / {current.length}
           </div>
-        </div>
+        </div>,
+        document.body
       )}
-    </div>
+    </section>
   );
 };
 

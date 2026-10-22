@@ -1,33 +1,37 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 
-const Footer = () => {
-  const year = new Date().getFullYear();
+const LINKS = [
+  { to: '/movies', label: 'Filmler' },
+  { to: '/series', label: 'Diziler' },
+  { to: '/sahneler', label: 'Sahneler' },
+  { to: '/sss', label: 'SSS' },
+  { to: '/iletisim', label: 'İletişim' },
+  { to: '/gizlilik-politikasi', label: 'Gizlilik' },
+  { to: '/kullanim-kosullari', label: 'Kullanım koşulları' },
+];
 
-  return (
-    <footer className="footer-minimal">
-      <div className="container-custom">
-        <div className="footer-top">
-          <div className="footer-brand">
-            <Link to="/" className="footer-logo">SINEFIX</Link>
-            <p className="footer-tagline">Film ve dizi izleme platformu</p>
-          </div>
-          <div className="footer-links-row">
-            <Link to="/movies">Filmler</Link>
-            <Link to="/series">Diziler</Link>
-            <Link to="/sahneler">Sahneler</Link>
-            <Link to="/iletisim">İletişim</Link>
-            <Link to="/gizlilik-politikasi">Gizlilik</Link>
-            <Link to="/kullanim-kosullari">Koşullar</Link>
-            <Link to="/sss">SSS</Link>
-          </div>
+const Footer = () => (
+  <footer className="site-footer">
+    <div className="container-custom">
+      <div className="footer-top">
+        <div>
+          <Link to="/" className="footer-logo">SINEFIX</Link>
+          <p className="footer-tagline">Film ve dizi keşif platformu</p>
         </div>
-        <div className="footer-bottom">
-          <p>© {year} SINEFIX. TMDB API kullanılmaktadır.</p>
-        </div>
+        <nav className="footer-links" aria-label="Alt bağlantılar">
+          {LINKS.map(link => <Link key={link.to} to={link.to}>{link.label}</Link>)}
+        </nav>
       </div>
-    </footer>
-  );
-};
+      <div className="footer-bottom">
+        © {new Date().getFullYear()} SINEFIX. Film ve dizi verileri{' '}
+        <a href="https://www.themoviedb.org" target="_blank" rel="noopener noreferrer" className="underline underline-offset-2 hover:text-white">
+          TMDB
+        </a>{' '}
+        API'si ile sağlanır; bu ürün TMDB tarafından onaylanmamıştır.
+      </div>
+    </div>
+  </footer>
+);
 
 export default Footer;

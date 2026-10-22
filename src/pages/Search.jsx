@@ -1,71 +1,190 @@
-import React, { useState, useEffect } from 'react';
-import { useLocation } from 'react-router-dom';
+import React, { useEffect, useRef, useState } from 'react';
+import { Link, useSearchParams } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
-import { searchService } from '../services/tmdb';
-import { useSearchDebounce, useApi } from '../hooks';
-import { useToast } from '../components/UI/Toast';
+import { FaSearch, FaTimes } from 'react-icons/fa';
+import { useDebounce, useSearch, useTrending } from '../hooks';
 import MovieCard from '../components/UI/MovieCard';
-import { SkeletonList } from '../components/UI/Loading';
+import PersonCard from '../components/UI/PersonCard';
+import Pagination from '../components/UI/Pagination';
+import MediaRow from '../components/UI/MediaRow';
+import { GridSkeleton, Spinner } from '../components/UI/Loading';
+import { EmptyState, ErrorState } from '../components/UI/States';
+import { QUICK_GENRES } from '../components/UI/SearchModal';
+import { formatNumber } from '../utils/helpers';
+
+const FILTERS = [
+  { id: 'all', label: 'Tümü' },
+  { id: 'movie', label: 'Filmler' },
+  { id: 'tv', label: 'Diziler' },
+  { id: 'person', label: 'Kişiler' },
+];
+
+const MAX_PAGE = 500;
 
 const Search = () => {
-  const location = useLocation();
-  const { toast } = useToast();
-  const [currentQuery, setCurrentQuery] = useState(new URLSearchParams(location.search).get('q') || '');
+  const [searchParams, setSearchParams] = useSearchParams();
+  const urlQuery = searchParams.get('q') || '';
+  const page = Math.max(1, Number(searchParams.get('page')) || 1);
+  const filter = FILTERS.some(f => f.id === searchParams.get('type')) ? searchParams.get('type') : 'all';
 
-  const { data: searchData, loading, execute: performSearch } = useApi(
-    (query) => searchService.multi(query),
-    [],
-    {
-      immediate: false,
-      onError: () => toast.error('Arama sırasında hata oluştu')
-    }
-  );
+  const [input, setInput] = useState(urlQuery);
+  const debounced = useDebounce(input.trim(), 400);
+  const inputRef = useRef(null);
+  const query = urlQuery.trim();
+
+  const { data, isLoading, isFetching, isError, refetch } = useSearch(query, page, filter);
+  const trending = useTrending('week');
+
+  // Tarayıcı geri/ileri tuşlarıyla URL değişirse input'u güncelle
+  useEffect(() => {
+    setInput(current => (current.trim() === urlQuery ? current : urlQuery));
+  }, [urlQuery]);
+
+  // Yazdıkça URL'yi güncelle (geçmişi kirletmeden)
+  useEffect(() => {
+    if (debounced === query) return;
+    const next = new URLSearchParams();
+    if (debounced) next.set('q', debounced);
+    if (filter !== 'all') next.set('type', filter);
+    setSearchParams(next, { replace: true });
+  }, [debounced]);
 
   useEffect(() => {
-    const searchQuery = new URLSearchParams(location.search).get('q');
-    if (searchQuery && searchQuery !== currentQuery) {
-      setCurrentQuery(searchQuery);
-      performSearch(searchQuery);
-    }
-  }, [location.search, currentQuery, performSearch]);
+    if (!query) inputRef.current?.focus();
+  }, []);
 
-  const results = searchData?.results || [];
-  const filteredResults = results.filter(result => result.media_type === 'movie' || result.media_type === 'tv');
+  const setParam = (changes) => {
+    const next = new URLSearchParams(searchParams);
+    Object.entries(changes).forEach(([key, value]) => {
+      if (value && value !== 'all' && !(key === 'page' && value === 1)) next.set(key, value);
+      else next.delete(key);
+    });
+    setSearchParams(next);
+  };
+
+  const results = (data?.results || []).filter(item =>
+    filter === 'all' ? ['movie', 'tv', 'person'].includes(item.media_type) : item.media_type === filter
+  );
+  const people = results.filter(item => item.media_type === 'person');
+  const titles = results.filter(item => item.media_type !== 'person');
+  const totalPages = Math.min(data?.total_pages || 0, MAX_PAGE);
+  const tooShort = query.length > 0 && query.length < 2;
 
   return (
     <>
       <Helmet>
-        <title>SINEFIX - "{currentQuery}" İçin Arama Sonuçları</title>
+        <title>{query ? `“${query}” arama sonuçları - SINEFIX` : 'Ara - SINEFIX'}</title>
       </Helmet>
 
-      <div className="min-h-screen pt-20">
-        <div className="container-custom">
-          <div className="mb-8">
-            <h1 className="text-3xl font-bold">
-              "{currentQuery}" için arama sonuçları
-            </h1>
-            <p className="text-gray-400 mt-2">
-              {loading ? 'Aranıyor...' : `${filteredResults.length} sonuç bulundu`}
-            </p>
+      <div className="page container-custom">
+        <form
+          role="search"
+          className="mb-5"
+          onSubmit={(event) => {
+            event.preventDefault();
+            setParam({ q: input.trim(), page: 1 });
+            inputRef.current?.blur();
+          }}
+        >
+          <label htmlFor="search-input" className="sr-only">Film, dizi veya kişi ara</label>
+          <div className="input-with-icon">
+            <FaSearch />
+            <input
+              id="search-input"
+              ref={inputRef}
+              type="search"
+              value={input}
+              onChange={(event) => setInput(event.target.value)}
+              placeholder="Film, dizi veya kişi ara…"
+              className="input !h-12 !pr-12 !text-base"
+              enterKeyHint="search"
+              autoComplete="off"
+            />
+            {input && (
+              <button
+                type="button"
+                onClick={() => {
+                  setInput('');
+                  inputRef.current?.focus();
+                }}
+                className="icon-btn absolute right-1 top-1/2 -translate-y-1/2"
+                aria-label="Aramayı temizle"
+              >
+                <FaTimes className="text-sm" />
+              </button>
+            )}
           </div>
+        </form>
 
-          {loading ? (
-            <SkeletonList count={12} />
-          ) : (
-            <div className="movie-grid">
-              {filteredResults.map(result => (
-                <MovieCard key={result.id} item={result} mediaType={result.media_type} />
+        {query.length >= 2 && (
+          <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
+            <div className="segmented">
+              {FILTERS.map(f => (
+                <button key={f.id} type="button" className={filter === f.id ? 'active' : ''} onClick={() => setParam({ type: f.id, page: 1 })}>
+                  {f.label}
+                </button>
               ))}
             </div>
-          )}
-          
-          {!loading && filteredResults.length === 0 && currentQuery && (
-            <div className="text-center py-20">
-              <p className="text-gray-400 text-lg">Aradığınız içerik bulunamadı.</p>
-              <p className="text-gray-500 text-sm mt-2">Farklı anahtar kelimeler deneyebilirsiniz.</p>
+            <div className="flex items-center gap-2 text-sm text-white/45">
+              {isFetching && <Spinner className="!h-4 !w-4" />}
+              {data && `${formatNumber(data.total_results)} sonuç`}
             </div>
-          )}
-        </div>
+          </div>
+        )}
+
+        {!query || tooShort ? (
+          <div className="space-y-8">
+            {tooShort && <p className="text-sm text-white/45">Aramak için en az 2 karakter yazın.</p>}
+            <div>
+              <h2 className="section-title mb-3">Türlere göz at</h2>
+              <div className="flex flex-wrap gap-2">
+                {QUICK_GENRES.map(genre => (
+                  <Link key={genre.name} to={genre.path} className="chip">{genre.name}</Link>
+                ))}
+              </div>
+            </div>
+            <div className="-mx-[var(--gutter)]">
+              <MediaRow title="Bu hafta popüler" items={trending.data?.results} loading={trending.isLoading} showType />
+            </div>
+          </div>
+        ) : isError ? (
+          <ErrorState onRetry={refetch} />
+        ) : isLoading ? (
+          <GridSkeleton count={12} />
+        ) : results.length === 0 ? (
+          <EmptyState
+            icon={FaSearch}
+            title="Sonuç bulunamadı"
+            description={`“${query}” için ${filter === 'all' ? '' : `${FILTERS.find(f => f.id === filter).label.toLocaleLowerCase('tr-TR')} arasında `}sonuç yok. Yazımı kontrol edin veya farklı bir kelime deneyin.`}
+          />
+        ) : (
+          <>
+            {people.length > 0 && (
+              <section className="mb-10">
+                {filter === 'all' && <h2 className="section-title mb-4">Kişiler</h2>}
+                <div className="media-grid compact">
+                  {people.map(person => <PersonCard key={person.id} person={person} />)}
+                </div>
+              </section>
+            )}
+            {titles.length > 0 && (
+              <section>
+                {filter === 'all' && people.length > 0 && <h2 className="section-title mb-4">Film ve diziler</h2>}
+                <div className="media-grid">
+                  {titles.map(item => <MovieCard key={`${item.media_type}-${item.id}`} item={item} showType />)}
+                </div>
+              </section>
+            )}
+            <Pagination
+              page={page}
+              totalPages={totalPages}
+              onChange={(p) => {
+                setParam({ page: p });
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+              }}
+            />
+          </>
+        )}
       </div>
     </>
   );

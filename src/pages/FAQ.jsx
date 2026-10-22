@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
-import { FaChevronDown, FaChevronUp, FaSearch } from 'react-icons/fa';
+import { FaChevronDown, FaSearch } from 'react-icons/fa';
+import { EmptyState } from '../components/UI/States';
 
 const FAQ = () => {
-  const [activeIndex, setActiveIndex] = useState(null);
+  const [activeQuestion, setActiveQuestion] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
 
   const faqItems = [
@@ -17,7 +19,7 @@ const FAQ = () => {
     },
     {
       question: "SINEFIX'te hesap oluşturmam gerekiyor mu?",
-      answer: "SINEFIX'te içerikleri izlemek için hesap oluşturmanız gerekmiyor. Ancak, favorilerinizi kaydetmek, izleme geçmişinizi takip etmek ve kişiselleştirilmiş öneriler almak için ücretsiz bir hesap oluşturmanızı öneririz."
+      answer: "Hayır. Favorileriniz, izleme listeniz ve kaldığınız bölümler hesap olmadan da bu cihazdaki tarayıcınızda saklanır. Sahneler akışında beğenmek, kaydetmek ve yorum yapmak için ücretsiz bir hesap oluşturabilirsiniz."
     },
     {
       question: "İçerikler neden bazen yüklenmiyor?",
@@ -57,77 +59,69 @@ const FAQ = () => {
     }
   ];
 
-  const toggleAccordion = (index) => {
-    setActiveIndex(activeIndex === index ? null : index);
-  };
-
+  const term = searchTerm.trim().toLocaleLowerCase('tr-TR');
   const filteredFAQs = faqItems.filter(item =>
-    item.question.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    item.answer.toLowerCase().includes(searchTerm.toLowerCase())
+    item.question.toLocaleLowerCase('tr-TR').includes(term) ||
+    item.answer.toLocaleLowerCase('tr-TR').includes(term)
   );
 
   return (
-    <div className="min-h-screen bg-black text-white">
+    <>
       <Helmet>
         <title>Sıkça Sorulan Sorular - SINEFIX</title>
-        <meta name="description" content="SINEFIX hakkında sıkça sorulan sorular ve cevaplar. Platformumuz ile ilgili merak ettiklerinizi bulun." />
+        <meta name="description" content="SINEFIX hakkında sıkça sorulan sorular ve cevaplar." />
       </Helmet>
 
-      <div className="container-custom py-12">
-        <h1 className="text-4xl md:text-5xl font-bold mb-8 text-center">Sıkça Sorulan Sorular</h1>
-        
-        <div className="max-w-2xl mx-auto mb-12">
-          <div className="relative">
-            <input
-              type="text"
-              placeholder="Soru veya cevap ara..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full px-5 py-4 pl-12 bg-gray-900 border border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent"
-            />
-            <FaSearch className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400" />
-          </div>
+      <div className="page container-custom max-w-3xl">
+        <h1 className="page-title">Sıkça sorulan sorular</h1>
+        <p className="page-subtitle">Platformla ilgili merak ettiklerin.</p>
+
+        <div className="input-with-icon mb-6 mt-6">
+          <FaSearch />
+          <input
+            type="search"
+            placeholder="Soru veya cevap ara…"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="input"
+            aria-label="Sorularda ara"
+          />
         </div>
-        
-        <div className="max-w-3xl mx-auto space-y-4">
-          {filteredFAQs.length > 0 ? (
-            filteredFAQs.map((item, index) => (
-              <div key={index} className="border border-gray-800 rounded-xl overflow-hidden bg-gray-900/50 backdrop-blur-sm">
-                <button
-                  className="w-full px-6 py-5 text-left flex justify-between items-center hover:bg-gray-800/50 transition-colors duration-200"
-                  onClick={() => toggleAccordion(index)}
-                >
-                  <span className="text-lg font-semibold">{item.question}</span>
-                  {activeIndex === index ? <FaChevronUp className="text-gray-400" /> : <FaChevronDown className="text-gray-400" />}
-                </button>
-                <div className={`px-6 overflow-hidden transition-all duration-300 ${activeIndex === index ? 'max-h-96 pb-6' : 'max-h-0'}`}>
-                  <p className="text-gray-300">{item.answer}</p>
+
+        {filteredFAQs.length > 0 ? (
+          <div className="space-y-2">
+            {filteredFAQs.map((item) => {
+              const open = activeQuestion === item.question;
+              return (
+                <div key={item.question} className="surface overflow-hidden">
+                  <button
+                    type="button"
+                    className="flex w-full items-center justify-between gap-4 px-5 py-4 text-left hover:bg-white/[0.02]"
+                    onClick={() => setActiveQuestion(open ? null : item.question)}
+                    aria-expanded={open}
+                  >
+                    <span className="text-[15px] font-semibold">{item.question}</span>
+                    <FaChevronDown className={`flex-shrink-0 text-xs text-white/40 transition-transform ${open ? 'rotate-180' : ''}`} />
+                  </button>
+                  {open && (
+                    <p className="px-5 pb-5 text-sm leading-relaxed text-white/65">{item.answer}</p>
+                  )}
                 </div>
-              </div>
-            ))
-          ) : (
-            <div className="text-center py-12">
-              <h3 className="text-xl font-semibold mb-2">Sonuç Bulunamadı</h3>
-              <p className="text-gray-400">Aramanızla eşleşen herhangi bir soru veya cevap bulunamadı.</p>
-            </div>
-          )}
-        </div>
-        
-        <div className="mt-16 text-center">
-          <h3 className="text-2xl font-semibold mb-4">Sorunuza cevap bulamadınız mı?</h3>
-          <p className="text-gray-300 mb-6 max-w-2xl mx-auto">
-            Sorunuza cevap bulamadıysanız, lütfen bizimle iletişime geçmekten çekinmeyin. Ekibimiz size en kısa sürede yardımcı olacaktır.
-          </p>
-          <a
-            href="/iletisim"
-            className="inline-block px-8 py-3 bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white rounded-xl font-semibold transition-all duration-300 transform hover:scale-105"
-          >
-            Bizimle İletişime Geçin
-          </a>
+              );
+            })}
+          </div>
+        ) : (
+          <EmptyState title="Sonuç bulunamadı" description="Aramanla eşleşen bir soru yok." />
+        )}
+
+        <div className="surface mt-10 p-6 text-center">
+          <h2 className="text-lg font-bold">Sorunun cevabını bulamadın mı?</h2>
+          <p className="mt-1 text-sm text-white/50">Bize yaz, yardımcı olalım.</p>
+          <Link to="/iletisim" className="btn btn-primary mt-4">İletişime geç</Link>
         </div>
       </div>
-    </div>
+    </>
   );
 };
 
-export default FAQ; 
+export default FAQ;

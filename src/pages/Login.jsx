@@ -1,186 +1,85 @@
-import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { Helmet } from 'react-helmet-async';
-import { FaEnvelope, FaLock, FaEye, FaEyeSlash, FaGoogle, FaPlay } from 'react-icons/fa';
-import { useAuth } from '../contexts/AuthContext';
-import { supabase } from '../services/supabase';
+import React, { useEffect, useState } from 'react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { useAuth, translateAuthError } from '../contexts/AuthContext';
+import { useToast } from '../components/UI/Toast';
+import AuthShell, { Field, GoogleButton, PasswordField } from '../components/Auth/AuthShell';
 
 const Login = () => {
   const navigate = useNavigate();
-  const { signIn } = useAuth();
+  const location = useLocation();
+  const { signIn, signInWithProvider, isAuthenticated, isConfigured } = useAuth();
+  const { toast } = useToast();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [focusedField, setFocusedField] = useState(null);
+  const redirectTo = location.state?.from || '/';
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  useEffect(() => {
+    if (isAuthenticated) navigate(redirectTo, { replace: true });
+  }, [isAuthenticated, navigate, redirectTo]);
+
+  const handleSubmit = async (event) => {
+    event.preventDefault();
     setLoading(true);
     setError('');
-
-    const { error } = await signIn(email, password);
-    
-    if (error) {
-      setError(error.message);
-    } else {
-      navigate('/');
-    }
-    
+    const { error: signInError } = await signIn(email.trim(), password);
     setLoading(false);
+    if (signInError) {
+      setError(translateAuthError(signInError));
+      return;
+    }
+    toast.success('Hoş geldin!');
+    navigate(redirectTo, { replace: true });
   };
 
-  const handleSocialLogin = async (provider) => {
-    if (!supabase) return;
-    
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider,
-      options: {
-        redirectTo: `${window.location.origin}/`
-      }
-    });
-    
-    if (error) setError(error.message);
+  const handleGoogle = async () => {
+    setError('');
+    const { error: oauthError } = await signInWithProvider('google');
+    if (oauthError) setError(translateAuthError(oauthError));
   };
 
   return (
-    <>
-      <Helmet>
-        <title>Giriş Yap | SineFix</title>
-      </Helmet>
+    <AuthShell pageTitle="Giriş yap" title="Giriş yap" subtitle="Hesabına giriş yaparak devam et.">
+      {!isConfigured && (
+        <div className="auth-notice">Üyelik sistemi şu anda yapılandırılmamış. Favorilerin ve izleme listen yine de bu cihazda saklanır.</div>
+      )}
+      {error && <div className="auth-error" role="alert">{error}</div>}
 
-      <div className="auth-modern-page">
-        {/* Background Effect */}
-        <div className="auth-bg-effect">
-          <div className="auth-bg-gradient" />
-          <div className="auth-bg-grid" />
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <Field
+          id="email"
+          label="E-posta"
+          type="email"
+          autoComplete="email"
+          inputMode="email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          required
+        />
+        <PasswordField
+          id="password"
+          label="Şifre"
+          autoComplete="current-password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          required
+        />
+        <div className="flex justify-end">
+          <Link to="/forgot-password" className="text-sm text-white/50 hover:text-white">Şifreni mi unuttun?</Link>
         </div>
+        <button type="submit" className="btn btn-primary btn-block btn-lg" disabled={loading || !isConfigured}>
+          {loading ? 'Giriş yapılıyor…' : 'Giriş yap'}
+        </button>
+      </form>
 
-        <div className="auth-modern-container">
-          {/* Left Side - Branding */}
-          <div className="auth-branding">
-            <div className="auth-branding-content">
-              <div className="auth-logo">
-                <FaPlay className="auth-logo-icon" />
-                <span className="auth-logo-text">SineFix</span>
-              </div>
-              <h2 className="auth-branding-title">Film ve Dizi Dünyasına Hoş Geldin</h2>
-              <p className="auth-branding-desc">
-                Binlerce film ve dizi seni bekliyor. Favorilerini kaydet, izleme listeleri oluştur ve eğlenceye başla!
-              </p>
-              <div className="auth-features">
-                <div className="auth-feature">
-                  <span className="auth-feature-icon">🎬</span>
-                  <span>Sınırsız İçerik</span>
-                </div>
-                <div className="auth-feature">
-                  <span className="auth-feature-icon">❤️</span>
-                  <span>Favoriler</span>
-                </div>
-                <div className="auth-feature">
-                  <span className="auth-feature-icon">📱</span>
-                  <span>Her Cihazda</span>
-                </div>
-              </div>
-            </div>
-          </div>
+      <div className="auth-divider">veya</div>
+      <GoogleButton onClick={handleGoogle} disabled={!isConfigured} />
 
-          {/* Right Side - Form */}
-          <div className="auth-form-side">
-            <div className="auth-form-container">
-              <div className="auth-form-header">
-                <h1>Giriş Yap</h1>
-                <p>Hesabınıza giriş yapın</p>
-              </div>
-
-              {error && (
-                <div className="auth-error-modern">
-                  <span>{error}</span>
-                </div>
-              )}
-
-              <form onSubmit={handleSubmit} className="auth-form">
-                <div className={`auth-input-group ${focusedField === 'email' ? 'focused' : ''} ${email ? 'has-value' : ''}`}>
-                  <FaEnvelope className="auth-input-icon" />
-                  <input
-                    type="email"
-                    id="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    onFocus={() => setFocusedField('email')}
-                    onBlur={() => setFocusedField(null)}
-                    required
-                  />
-                  <label htmlFor="email">E-posta Adresi</label>
-                  <div className="auth-input-line" />
-                </div>
-
-                <div className={`auth-input-group ${focusedField === 'password' ? 'focused' : ''} ${password ? 'has-value' : ''}`}>
-                  <FaLock className="auth-input-icon" />
-                  <input
-                    type={showPassword ? 'text' : 'password'}
-                    id="password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    onFocus={() => setFocusedField('password')}
-                    onBlur={() => setFocusedField(null)}
-                    required
-                  />
-                  <label htmlFor="password">Şifre</label>
-                  <button
-                    type="button"
-                    className="auth-password-toggle"
-                    onClick={() => setShowPassword(!showPassword)}
-                  >
-                    {showPassword ? <FaEyeSlash /> : <FaEye />}
-                  </button>
-                  <div className="auth-input-line" />
-                </div>
-
-                <div className="auth-options">
-                  <label className="auth-remember">
-                    <input type="checkbox" />
-                    <span className="auth-checkbox" />
-                    <span>Beni hatırla</span>
-                  </label>
-                  <Link to="/forgot-password" className="auth-forgot">Şifremi Unuttum</Link>
-                </div>
-
-                <button type="submit" className="auth-submit-btn" disabled={loading}>
-                  {loading ? (
-                    <span className="auth-loading">
-                      <span className="auth-loading-spinner" />
-                      Giriş Yapılıyor...
-                    </span>
-                  ) : (
-                    'Giriş Yap'
-                  )}
-                </button>
-              </form>
-
-              <div className="auth-divider">
-                <span>veya</span>
-              </div>
-
-              <div className="auth-social-buttons">
-                <button 
-                  className="auth-social-btn google full-width"
-                  onClick={() => handleSocialLogin('google')}
-                >
-                  <FaGoogle />
-                  <span>Google ile Giriş Yap</span>
-                </button>
-              </div>
-
-              <p className="auth-switch">
-                Hesabınız yok mu? <Link to="/register">Kayıt Olun</Link>
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
-    </>
+      <p className="mt-6 text-center text-sm text-white/45">
+        Hesabın yok mu? <Link to="/register" state={location.state} className="font-semibold text-white hover:underline">Kayıt ol</Link>
+      </p>
+    </AuthShell>
   );
 };
 

@@ -14,6 +14,25 @@ const shuffleArray = (array) => {
 const movieGenres = [28, 12, 16, 35, 80, 99, 18, 10751, 14, 36, 27, 10402, 9648, 10749, 878, 10770, 53, 10752, 37];
 const tvGenres = [10759, 16, 35, 80, 99, 18, 10751, 10762, 9648, 10763, 10764, 10765, 10766, 10767, 10768, 37];
 
+// /sahneler/:slug bağlantıları "<id>-<movie|tv>-<başlık>" biçimindedir.
+export const createShortSlug = (item) => {
+  if (!item) return null;
+  const title = (item.title || item.name || '')
+    .toLocaleLowerCase('tr-TR')
+    .replace(/ı/g, 'i')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .substring(0, 50);
+  return `${item.id}-${item.media_type}${title ? `-${title}` : ''}`;
+};
+
+export const parseShortSlug = (slug) => {
+  const match = /^(\d+)-(movie|tv)(?:-|$)/.exec(slug || '');
+  return match ? { id: Number(match[1]), mediaType: match[2] } : null;
+};
+
 export const shortsService = {
   getInfiniteContent: async (page = 1) => {
     try {

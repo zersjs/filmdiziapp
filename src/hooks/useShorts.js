@@ -5,7 +5,8 @@ export const useShorts = () => {
   const [shorts, setShorts] = useState([]);
   const [isReady, setIsReady] = useState(false);
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [isMuted, setIsMuted] = useState(false); // Sesli başla
+  // Tarayıcılar sesli otomatik oynatmayı engeller; sessiz başlayıp kullanıcıya açtırıyoruz.
+  const [isMuted, setIsMuted] = useState(true);
   const [error, setError] = useState(null);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   
@@ -14,27 +15,15 @@ export const useShorts = () => {
   const fetchedPagesRef = useRef(new Set());
   const maxItems = 80; // Maximum items to keep in memory
 
+  // Başka bir istek sürüyorsa veya sayfa zaten çekildiyse null döner.
   const fetchPage = useCallback(async (pageNum) => {
-    // Sadece fetching kontrolü yap, set kontrolü kaldırıldı
-    if (isFetchingRef.current) {
-      console.log('Already fetching, skipping page:', pageNum);
-      return [];
-    }
-    
-    // Daha önce çekilmiş sayfayı tekrar çekme
-    if (fetchedPagesRef.current.has(pageNum)) {
-      console.log('Page already fetched:', pageNum);
-      return [];
-    }
-    
+    if (isFetchingRef.current || fetchedPagesRef.current.has(pageNum)) return null;
+
     try {
       isFetchingRef.current = true;
       setIsLoadingMore(true);
       fetchedPagesRef.current.add(pageNum);
-      
-      console.log('Fetching page:', pageNum);
       const data = await shortsService.getContentWithTrailers(pageNum);
-      console.log('Fetched items:', data.length);
       return data;
     } catch (error) {
       console.error('Fetch page error:', error);
@@ -50,10 +39,10 @@ export const useShorts = () => {
   const initializeShorts = useCallback(async () => {
     try {
       setError(null);
-      console.log('Initializing shorts...');
       
       const firstBatch = await fetchPage(1);
-      
+      if (firstBatch === null) return;
+
       if (firstBatch.length > 0) {
         setShorts(firstBatch);
         setIsReady(true);
@@ -62,7 +51,7 @@ export const useShorts = () => {
         // Preload second and third page in background
         setTimeout(async () => {
           const secondBatch = await fetchPage(2);
-          if (secondBatch.length > 0) {
+          if (secondBatch?.length > 0) {
             setShorts(prev => {
               const existingIds = new Set(prev.map(s => `${s.id}-${s.media_type}`));
               const newItems = secondBatch.filter(item => !existingIds.has(`${item.id}-${item.media_type}`));
@@ -73,7 +62,7 @@ export const useShorts = () => {
             // Third page
             setTimeout(async () => {
               const thirdBatch = await fetchPage(3);
-              if (thirdBatch.length > 0) {
+              if (thirdBatch?.length > 0) {
                 setShorts(prev => {
                   const existingIds = new Set(prev.map(s => `${s.id}-${s.media_type}`));
                   const newItems = thirdBatch.filter(item => !existingIds.has(`${item.id}-${item.media_type}`));
@@ -98,21 +87,16 @@ export const useShorts = () => {
   }, [initializeShorts]);
 
   const loadMoreInBackground = useCallback(async () => {
-    if (isFetchingRef.current) {
-      console.log('Already fetching, skip loadMore');
-      return;
-    }
+    if (isFetchingRef.current) return;
     
     const nextPage = pageRef.current + 1;
-    console.log('Loading more, next page:', nextPage);
     
     const newData = await fetchPage(nextPage);
-    
-    if (newData.length > 0) {
+
+    if (newData?.length > 0) {
       setShorts(prev => {
         const existingIds = new Set(prev.map(s => `${s.id}-${s.media_type}`));
         const newItems = newData.filter(item => !existingIds.has(`${item.id}-${item.media_type}`));
-        console.log('Adding new items:', newItems.length);
         return [...prev, ...newItems];
       });
       pageRef.current = nextPage;
@@ -133,8 +117,6 @@ export const useShorts = () => {
       if (keepStart > 0) {
         setCurrentIndex(curr => curr - keepStart);
       }
-      
-      console.log('Cleaned up items, new length:', cleaned.length);
       return cleaned;
     });
   }, [currentIndex]);

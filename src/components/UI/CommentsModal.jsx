@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { Link } from 'react-router-dom';
 import { FaTimes, FaPaperPlane, FaTrash, FaUser } from 'react-icons/fa';
 import { commentsService } from '../../services/supabase';
 import { useAuth } from '../../contexts/AuthContext';
@@ -260,7 +261,7 @@ const CommentsModal = ({ isOpen, onClose, mediaId, mediaType, title }) => {
         {/* Header */}
         <div className="comments-modal-header">
           <h3>Yorumlar <span>({commentCount})</span></h3>
-          <button className="comments-close-btn" onClick={handleClose}>
+          <button className="comments-close-btn" onClick={handleClose} aria-label="Yorumları kapat">
             <FaTimes />
           </button>
         </div>
@@ -337,7 +338,7 @@ const CommentsModal = ({ isOpen, onClose, mediaId, mediaType, title }) => {
             </form>
           ) : (
             <div className="comments-login-prompt">
-              <p>Yorum yapmak için <a href="/login">giriş yapın</a></p>
+              <p>Yorum yapmak için <Link to="/login" state={{ from: window.location.pathname }}>giriş yap</Link></p>
             </div>
           )}
         </div>
