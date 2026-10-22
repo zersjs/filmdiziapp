@@ -1,7 +1,7 @@
 ## Cursor Cloud specific instructions
 
 ### Overview
-SINEFIX is a Turkish-language movie/TV streaming frontend (React 18 + Vite + TailwindCSS). No backend exists in this repo — external services are TMDB API and Supabase (BaaS).
+SINEFIX is a Turkish-language movie/TV discovery frontend (React 18 + Vite + TailwindCSS). There are no user accounts. The only backend is one Vercel Function (`api/library.js`) for optional cross-device library sync, backed by Upstash Redis via REST. External services: TMDB API, YouTube IFrame API.
 
 ### Services
 | Service | Command | Port | Notes |
@@ -17,7 +17,10 @@ SINEFIX is a Turkish-language movie/TV streaming frontend (React 18 + Vite + Tai
 
 ### Architecture notes
 - Data fetching goes through TanStack Query hooks in `src/hooks/useTmdb.js`; do not call TMDB services directly from pages.
-- `src/contexts/AppContext.jsx` is the single source of truth for favorites, watch later and continue watching (persisted to localStorage). Do not write those keys from anywhere else.
+- `src/contexts/AppContext.jsx` is the single source of truth for favorites, watch later and continue watching (persisted to localStorage, synced via `/api/library` when a sync key exists). Do not write those keys from anywhere else.
+- The library data model (sanitize + tombstone merge) lives in `src/lib/library.js` and is shared by the browser and `server/libraryHandler.js`.
+- In `npm run dev`, a Vite middleware serves `/api/library` with the same handler and an in-memory store (no Vercel CLI needed).
+- Shorts: feed engine in `src/services/shorts.js`, hook in `src/hooks/useShortsFeed.js`, YouTube player in `src/components/Shorts/ShortPlayer.jsx`. YouTube is unreachable from the cloud sandbox; E2E tests should stub `https://www.youtube.com/iframe_api`.
 - Movies/Series pages share `src/pages/Browse.jsx`; filter → TMDB discover params live in `src/services/browse.js`.
 - Movie and TV detail pages share `src/pages/MediaDetail.jsx`.
 - Layout breakpoints: sidebar at ≥1024px, top bar + bottom nav below. Shared CSS lives in `src/index.css`.
@@ -29,5 +32,6 @@ SINEFIX is a Turkish-language movie/TV streaming frontend (React 18 + Vite + Tai
 ### Environment
 - Node.js v22+ and npm v10+ (pre-installed via nvm)
 - No Docker, no backend, no database required locally
-- `.env` contains TMDB and Supabase credentials (hardcoded fallback API keys also exist in `src/services/tmdb.js`)
+- `.env` contains TMDB credentials (hardcoded fallback API keys also exist in `src/services/tmdb.js`); Supabase entries in it are no longer used
+- Sync storage env vars (`KV_REST_API_URL`, `KV_REST_API_TOKEN`) are server-only; never prefix them with `VITE_`
 - `vite.config.js` sets `server.open: true` — when running in Cloud Agent, the browser auto-open is harmless

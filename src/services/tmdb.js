@@ -133,7 +133,7 @@ export const genreService = {
 
 export const trendingService = {
   
-  getAll: (timeWindow = 'week') => tmdbApi.get(`/trending/all/${timeWindow}`),
+  getAll: (timeWindow = 'week', page = 1) => tmdbApi.get(`/trending/all/${timeWindow}`, { params: { page } }),
   
   getMovies: (timeWindow = 'week') => tmdbApi.get(`/trending/movie/${timeWindow}`),
   

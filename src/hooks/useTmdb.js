@@ -55,14 +55,19 @@ const withEnglishFallback = async (data, fetchEnglish, fields) => {
   }
 };
 
+// Sahneler gibi hook dışından da aynı önbelleği kullanabilmek için paylaşılır.
+export const detailQueryOptions = (mediaType, id) => ({
+  queryKey: ['detail', mediaType, String(id)],
+  queryFn: async () => {
+    const service = mediaType === 'tv' ? tvService : movieService;
+    const data = await unwrap(service.getDetail(id));
+    return withEnglishFallback(data, () => service.getBasic(id, 'en-US'), ['overview']);
+  },
+});
+
 export const useDetail = (mediaType, id) =>
   useQuery({
-    queryKey: ['detail', mediaType, String(id)],
-    queryFn: async () => {
-      const service = mediaType === 'tv' ? tvService : movieService;
-      const data = await unwrap(service.getDetail(id));
-      return withEnglishFallback(data, () => service.getBasic(id, 'en-US'), ['overview']);
-    },
+    ...detailQueryOptions(mediaType, id),
     enabled: !!id && (mediaType === 'movie' || mediaType === 'tv'),
   });
 

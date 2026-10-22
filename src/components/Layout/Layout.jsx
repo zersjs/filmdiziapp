@@ -1,38 +1,28 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { Link, NavLink, useLocation } from 'react-router-dom';
-import { FaSearch, FaHeart, FaBookmark, FaUser, FaSignInAlt, FaSignOutAlt } from 'react-icons/fa';
+import { FaSearch, FaHeart, FaBookmark, FaCog } from 'react-icons/fa';
 import Logo from '../UI/Logo';
 import SearchModal from '../UI/SearchModal';
-import { useAuth, getAvatarUrl, getDisplayName } from '../../contexts/AuthContext';
 import { useApp } from '../../contexts';
-import { useToast } from '../UI/Toast';
 import MobileBottomNav from './MobileBottomNav';
 import Footer from './Footer';
 import { PRIMARY_NAV } from './navigation';
 
-const UserAvatar = ({ user }) => {
-  const url = getAvatarUrl(user);
-  return url ? (
-    <img src={url} alt="" className="sidebar-avatar" />
-  ) : (
-    <span className="sidebar-avatar">{getDisplayName(user).charAt(0).toUpperCase()}</span>
-  );
+// Senkronizasyon açıksa ayarlar ikonunda küçük bir durum noktası gösterilir.
+const SyncDot = ({ className = '' }) => {
+  const { sync } = useApp();
+  if (!sync.enabled) return null;
+  const color = sync.state === 'error' ? 'bg-red-400' : sync.state === 'syncing' ? 'bg-yellow-300' : 'bg-green-400';
+  return <span className={`absolute h-2 w-2 rounded-full ring-2 ring-[#080808] ${color} ${className}`} aria-hidden="true" />;
 };
 
 const Sidebar = ({ onSearch }) => {
-  const { user, isAuthenticated, signOut } = useAuth();
   const { state } = useApp();
-  const { toast } = useToast();
 
   const libraryNav = [
     { path: '/watch-later', icon: FaBookmark, label: 'İzleme Listem', count: state.watchLater.length },
     { path: '/favorites', icon: FaHeart, label: 'Favorilerim', count: state.favorites.length },
   ];
-
-  const handleSignOut = async () => {
-    const { error } = await signOut();
-    if (!error) toast.info('Çıkış yapıldı');
-  };
 
   return (
     <aside className="sidebar" aria-label="Ana menü">
@@ -66,30 +56,19 @@ const Sidebar = ({ onSearch }) => {
       </nav>
 
       <div className="sidebar-footer">
-        {isAuthenticated ? (
-          <>
-            <NavLink to={`/profile/${user.id}`} className={({ isActive }) => `sidebar-item ${isActive ? 'active' : ''}`} title="Profil">
-              <UserAvatar user={user} />
-              <span className="sidebar-label truncate pr-3">{getDisplayName(user)}</span>
-            </NavLink>
-            <button type="button" onClick={handleSignOut} className="sidebar-item" title="Çıkış yap">
-              <FaSignOutAlt />
-              <span className="sidebar-label">Çıkış yap</span>
-            </button>
-          </>
-        ) : (
-          <NavLink to="/login" className={({ isActive }) => `sidebar-item ${isActive ? 'active' : ''}`} title="Giriş yap">
-            <FaSignInAlt />
-            <span className="sidebar-label">Giriş yap</span>
-          </NavLink>
-        )}
+        <NavLink to="/ayarlar" className={({ isActive }) => `sidebar-item ${isActive ? 'active' : ''}`} title="Kitaplık ve senkronizasyon">
+          <span className="relative flex flex-shrink-0">
+            <FaCog />
+            <SyncDot className="-right-1 -top-1" />
+          </span>
+          <span className="sidebar-label">Ayarlar</span>
+        </NavLink>
       </div>
     </aside>
   );
 };
 
 const TopBar = ({ onSearch }) => {
-  const { user, isAuthenticated } = useAuth();
   const [scrolled, setScrolled] = useState(false);
 
   useEffect(() => {
@@ -110,15 +89,10 @@ const TopBar = ({ onSearch }) => {
           <button type="button" onClick={onSearch} className="icon-btn" aria-label="Ara">
             <FaSearch />
           </button>
-          {isAuthenticated ? (
-            <Link to={`/profile/${user.id}`} className="icon-btn" aria-label="Profil">
-              <UserAvatar user={user} />
-            </Link>
-          ) : (
-            <Link to="/login" className="icon-btn" aria-label="Giriş yap">
-              <FaUser />
-            </Link>
-          )}
+          <Link to="/ayarlar" className="icon-btn relative" aria-label="Kitaplık ve senkronizasyon">
+            <FaCog />
+            <SyncDot className="right-[8px] top-[8px]" />
+          </Link>
         </div>
       </div>
     </header>

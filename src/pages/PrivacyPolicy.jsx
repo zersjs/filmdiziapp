@@ -14,7 +14,7 @@ const PrivacyPolicy = () => {
           <h1 className="page-title mb-6">Gizlilik Politikası</h1>
           
           <div className="surface prose-sf p-5 sm:p-8">
-            <p className="text-sm text-white/40">Son güncelleme tarihi: 1 Haziran 2023</p>
+            <p className="text-sm text-white/40">Son güncelleme tarihi: 22 Ekim 2026</p>
             
             <h2>1. Genel Bakış</h2>
             <p>
@@ -24,57 +24,51 @@ const PrivacyPolicy = () => {
             </p>
             
             <h2>2. Topladığımız Bilgiler</h2>
-            
-            <h3>2.1 Hesap Bilgileri</h3>
+
+            <h3>2.1 Hesap bilgisi tutmuyoruz</h3>
             <p>
-              SINEFIX'te bir hesap oluşturduğunuzda, adınız, e-posta adresiniz ve şifreniz gibi kişisel bilgilerinizi 
-              kaydederiz. Bu bilgiler hesabınızın oluşturulması ve yönetilmesi için gereklidir.
+              SINEFIX'te üyelik yoktur. Ad, e-posta adresi veya şifre istemiyor ve saklamıyoruz.
             </p>
-            
-            <h3>2.2 Kullanım Verileri</h3>
+
+            <h3>2.2 Cihazınızda saklanan veriler</h3>
             <p>
-              Platformumuzu nasıl kullandığınıza ilişkin bilgileri otomatik olarak toplarız. Bu bilgiler arasında 
-              izlediğiniz içerikler, arama geçmişiniz, platformda geçirdiğiniz süre ve etkileşimde bulunduğunuz 
-              özellikler yer alabilir.
+              Favorileriniz, izleme listeniz ve izlemeye devam ettiğiniz içerikler yalnızca tarayıcınızın yerel
+              depolamasında (localStorage) tutulur. Bu verileri Ayarlar sayfasından dışa aktarabilir veya silebilirsiniz.
             </p>
-            
-            <h3>2.3 Teknik Veriler</h3>
+
+            <h3>2.3 İsteğe bağlı senkronizasyon</h3>
             <p>
-              IP adresi, cihaz kimliği, tarayıcı türü ve versiyonu, işletim sistemi ve diğer teknik bilgiler gibi 
-              verileri de toplayabiliriz.
+              Cihazlar arası senkronizasyonu açarsanız, film/dizi listeleriniz sunucumuzda rastgele üretilen bir
+              senkron koduna bağlı olarak saklanır. Kodun kendisi saklanmaz; yalnızca tek yönlü özeti (SHA-256) anahtar
+              olarak kullanılır. 13 ay boyunca kullanılmayan veriler otomatik silinir; Ayarlar sayfasından istediğiniz an
+              silebilirsiniz.
             </p>
-            
+
+            <h3>2.4 Teknik veriler</h3>
+            <p>
+              Kötüye kullanımı önlemek için senkronizasyon isteklerinde IP adresinizin özeti en fazla bir dakika süreyle
+              hız sınırlaması amacıyla tutulur. Analiz veya reklam takibi yapmıyoruz.
+            </p>
+
             <h2>3. Verilerin Kullanımı</h2>
             <p>
-              Topladığımız verileri aşağıdaki amaçlarla kullanırız:
+              Cihazınızdaki ve (açtıysanız) senkronizasyon sunucusundaki veriler yalnızca listelerinizi size göstermek ve
+              Sahneler akışını ilgi alanlarınıza göre sıralamak için kullanılır.
             </p>
+
+            <h2>4. Üçüncü Taraf Hizmetler</h2>
             <ul>
-              <li>Hesabınızı yönetmek ve hizmetlerimizi sunmak</li>
-              <li>İçerik önerilerini kişiselleştirmek</li>
-              <li>Platformumuzu ve hizmetlerimizi iyileştirmek</li>
-              <li>Kullanıcı deneyimini analiz etmek ve geliştirmek</li>
-              <li>İstenmeyen veya yasadışı faaliyetleri tespit etmek ve önlemek</li>
-              <li>Size özel teklifler ve promosyonlar sunmak (izin vermeniz halinde)</li>
+              <li>Film ve dizi bilgileri ile görseller TMDB'den yüklenir.</li>
+              <li>Fragmanlar YouTube'un gizlilik odaklı (youtube-nocookie.com) oynatıcısıyla gösterilir.</li>
+              <li>İzleme sayfasındaki oynatıcılar üçüncü taraf sitelerden yüklenir ve kendi çerezlerini kullanabilir.</li>
             </ul>
-            
-            <h2>4. Veri Paylaşımı</h2>
+
+            <h2>5. Çerezler</h2>
             <p>
-              Kişisel verilerinizi aşağıdaki durumlar dışında üçüncü taraflarla paylaşmayız:
+              SINEFIX'in kendisi çerez kullanmaz. Yukarıdaki üçüncü taraf hizmetler kendi politikalarına göre çerez
+              kullanabilir; bunları tarayıcı ayarlarınızdan yönetebilirsiniz.
             </p>
-            <ul>
-              <li>Açık onayınız olduğunda</li>
-              <li>Hizmetlerimizi sunmak için gerekli olduğunda (örn. ödeme işlemcileri)</li>
-              <li>Yasal bir yükümlülüğe uymak gerektiğinde</li>
-              <li>Haklarımızı, mülkiyetimizi veya güvenliğimizi korumak için gerektiğinde</li>
-            </ul>
-            
-            <h2>5. Çerezler ve Takip Teknolojileri</h2>
-            <p>
-              Platformumuzda çerezler ve benzer takip teknolojileri kullanıyoruz. Bu teknolojiler, kullanıcı deneyimini 
-              iyileştirmek, site kullanımını analiz etmek ve kişiselleştirilmiş içerik sunmak için kullanılır. Çerez 
-              ayarlarınızı tarayıcı ayarlarınızdan değiştirebilirsiniz.
-            </p>
-            
+
             <h2>6. Veri Güvenliği</h2>
             <p>
               Verilerinizin güvenliğini sağlamak için makul teknik ve organizasyonel önlemler alıyoruz. Ancak, 

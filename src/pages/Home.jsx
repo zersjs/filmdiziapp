@@ -3,8 +3,8 @@ import { Helmet } from 'react-helmet-async';
 import { Link, useNavigate } from 'react-router-dom';
 import { FaPlay, FaStar, FaTimes, FaInfoCircle, FaPlus, FaCheck, FaFire } from 'react-icons/fa';
 import { getImageUrl } from '../services/tmdb';
-import { createShortSlug, shortsService } from '../services/shorts';
-import { useQuery } from '@tanstack/react-query';
+import { createShortSlug } from '../services/shorts';
+import { useShortsPreview } from '../hooks/useShortsFeed';
 import { useMediaList, useTrending } from '../hooks';
 import { useApp } from '../contexts';
 import { useToast } from '../components/UI/Toast';
@@ -158,11 +158,7 @@ const ContinueWatchingRow = () => {
 
 const ShortsRow = () => {
   const navigate = useNavigate();
-  const { data = [], isLoading } = useQuery({
-    queryKey: ['home-shorts'],
-    queryFn: () => shortsService.getContentWithTrailers(1),
-    staleTime: 15 * 60 * 1000,
-  });
+  const { data = [], isLoading } = useShortsPreview();
 
   if (!isLoading && data.length === 0) return null;
 

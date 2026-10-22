@@ -5,7 +5,7 @@ import { PRIMARY_NAV } from './navigation';
 import MobileMenu from './MobileMenu';
 import { useApp } from '../../contexts';
 
-const LIBRARY_PATHS = ['/favorites', '/watch-later', '/profile', '/login', '/register', '/sss', '/iletisim'];
+const LIBRARY_PATHS = ['/favorites', '/watch-later', '/ayarlar', '/search', '/sss', '/iletisim'];
 
 const MobileBottomNav = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);

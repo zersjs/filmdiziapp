@@ -1,9 +1,8 @@
 import React, { Suspense, lazy, useLayoutEffect } from 'react';
-import { BrowserRouter as Router, Routes, Route, useLocation, useNavigationType } from 'react-router-dom';
+import { BrowserRouter as Router, Navigate, Routes, Route, useLocation, useNavigationType } from 'react-router-dom';
 import { HelmetProvider } from 'react-helmet-async';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AppProvider } from './contexts';
-import { AuthProvider } from './contexts/AuthContext';
 import { ToastProvider } from './components/UI/Toast';
 import ErrorBoundary from './components/ErrorBoundary';
 import Layout from './components/Layout/Layout';
@@ -24,11 +23,8 @@ const Contact = lazy(() => import('./pages/Contact'));
 const PrivacyPolicy = lazy(() => import('./pages/PrivacyPolicy'));
 const Terms = lazy(() => import('./pages/Terms'));
 const FAQ = lazy(() => import('./pages/FAQ'));
-const Profile = lazy(() => import('./pages/Profile'));
+const Settings = lazy(() => import('./pages/Settings'));
 const Shorts = lazy(() => import('./pages/Shorts'));
-const Login = lazy(() => import('./pages/Login'));
-const Register = lazy(() => import('./pages/Register'));
-const ForgotPassword = lazy(() => import('./pages/ForgotPassword'));
 const NotFound = lazy(() => import('./pages/NotFound'));
 
 const queryClient = new QueryClient({
@@ -77,11 +73,12 @@ const AppRoutes = () => {
             <Route path="/gizlilik-politikasi" element={<PrivacyPolicy />} />
             <Route path="/kullanim-kosullari" element={<Terms />} />
             <Route path="/sss" element={<FAQ />} />
-            <Route path="/profile/:userId" element={<Profile />} />
+            <Route path="/ayarlar" element={<Settings />} />
             <Route path="/sahneler/:slug?" element={<Shorts />} />
-            <Route path="/login" element={<Login />} />
-            <Route path="/register" element={<Register />} />
-            <Route path="/forgot-password" element={<ForgotPassword />} />
+            {/* Hesap sistemi kaldırıldı; eski bağlantılar kitaplık ayarlarına gider */}
+            {['/login', '/register', '/forgot-password', '/profile/*'].map(path => (
+              <Route key={path} path={path} element={<Navigate to="/ayarlar" replace />} />
+            ))}
             <Route path="*" element={<NotFound />} />
           </Routes>
         </Suspense>
@@ -95,16 +92,14 @@ function App() {
     <ErrorBoundary>
       <HelmetProvider>
         <QueryClientProvider client={queryClient}>
-          <AuthProvider>
-            <AppProvider>
-              <ToastProvider>
-                <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
-                  <ScrollToTop />
-                  <AppRoutes />
-                </Router>
-              </ToastProvider>
-            </AppProvider>
-          </AuthProvider>
+          <AppProvider>
+            <ToastProvider>
+              <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+                <ScrollToTop />
+                <AppRoutes />
+              </Router>
+            </ToastProvider>
+          </AppProvider>
         </QueryClientProvider>
       </HelmetProvider>
     </ErrorBoundary>

@@ -1,6 +1,7 @@
 import '@testing-library/jest-dom';
 import { vi } from 'vitest';
 
+if (typeof window !== 'undefined') {
 global.IntersectionObserver = class IntersectionObserver {
   constructor() {}
   disconnect() {}
@@ -34,3 +35,4 @@ const createStorage = () => {
 };
 
 Object.defineProperty(window, 'localStorage', { configurable: true, value: createStorage() });
+}

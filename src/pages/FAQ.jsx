@@ -15,11 +15,11 @@ const FAQ = () => {
     },
     {
       question: "SINEFIX'i nasıl kullanabilirim?",
-      answer: "SINEFIX'i kullanmak çok kolay! Sitemize giriş yaptıktan sonra ana sayfada popüler içerikleri görebilir, kategorilere göz atabilir veya arama çubuğunu kullanarak istediğiniz film veya diziyi bulabilirsiniz. İzlemek istediğiniz içeriğin detay sayfasına giderek 'İzle' butonuna tıklamanız yeterlidir."
+      answer: "SINEFIX'i kullanmak çok kolay! Ana sayfada popüler içerikleri görebilir, kategorilere göz atabilir veya arama çubuğunu kullanarak istediğiniz film veya diziyi bulabilirsiniz. İzlemek istediğiniz içeriğin detay sayfasına giderek 'İzle' butonuna tıklamanız yeterlidir."
     },
     {
       question: "SINEFIX'te hesap oluşturmam gerekiyor mu?",
-      answer: "Hayır. Favorileriniz, izleme listeniz ve kaldığınız bölümler hesap olmadan da bu cihazdaki tarayıcınızda saklanır. Sahneler akışında beğenmek, kaydetmek ve yorum yapmak için ücretsiz bir hesap oluşturabilirsiniz."
+      answer: "Hayır, SINEFIX'te üyelik yok. Favorileriniz, izleme listeniz ve kaldığınız bölümler bu cihazdaki tarayıcınızda saklanır. Telefon ve bilgisayarınızda aynı listeleri görmek isterseniz Ayarlar sayfasından senkronizasyonu açıp size verilen kodu diğer cihazınıza girmeniz yeterli."
     },
     {
       question: "İçerikler neden bazen yüklenmiyor?",

@@ -38,7 +38,6 @@ const SearchModal = ({ isOpen, onClose }) => {
     if (isOpen) {
       setQuery('');
       setSelected(-1);
-      requestAnimationFrame(() => inputRef.current?.focus());
     }
   }, [isOpen]);
 
@@ -86,6 +85,8 @@ const SearchModal = ({ isOpen, onClose }) => {
           <FaSearch className="flex-shrink-0 text-white/40" />
           <input
             ref={inputRef}
+            // Açılır açılmaz odaklan; bir kare beklemek hızlı yazılan ilk harfi kaybettiriyordu.
+            autoFocus
             type="search"
             value={query}
             onChange={(event) => setQuery(event.target.value)}
