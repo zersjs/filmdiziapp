@@ -3,6 +3,9 @@ import { createPortal } from 'react-dom';
 import { FaTimes, FaChevronLeft, FaChevronRight } from 'react-icons/fa';
 import { getImageUrl } from '../../services/tmdb';
 import { useBodyScrollLock, useEscapeKey } from './Modal';
+import Segmented from './Segmented';
+import SlideTransition from './SlideTransition';
+import { useSlideDirection } from '../../hooks/useSlideDirection';
 
 const TABS = [
   { id: 'backdrops', label: 'Sahneler' },
@@ -18,6 +21,7 @@ const ImageGallery = ({ images, title }) => {
     .filter(tab => tab.count > 0);
   const [activeTab, setActiveTab] = useState(tabs[0]?.id);
   const [index, setIndex] = useState(null);
+  const direction = useSlideDirection(activeTab, TABS.map(tab => tab.id));
 
   const current = (images?.[activeTab] || []).slice(0, MAX_IMAGES);
   const isOpen = index !== null;
@@ -49,16 +53,16 @@ const ImageGallery = ({ images, title }) => {
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <h2 className="section-title">Görseller</h2>
         {tabs.length > 1 && (
-          <div className="segmented">
-            {tabs.map(tab => (
-              <button key={tab.id} type="button" className={activeTab === tab.id ? 'active' : ''} onClick={() => setActiveTab(tab.id)}>
-                {tab.label} <span className="opacity-60">{tab.count}</span>
-              </button>
-            ))}
-          </div>
+          <Segmented
+            ariaLabel="Görsel türü"
+            options={tabs.map(tab => ({ value: tab.id, label: tab.label, count: tab.count }))}
+            value={activeTab}
+            onChange={setActiveTab}
+          />
         )}
       </div>
 
+      <SlideTransition id={activeTab} direction={direction}>
       <div className={`grid gap-3 ${isPoster ? 'grid-cols-3 sm:grid-cols-4 lg:grid-cols-6' : 'grid-cols-1 xs:grid-cols-2 lg:grid-cols-3'}`}>
         {current.map((image, i) => (
           <button
@@ -77,6 +81,7 @@ const ImageGallery = ({ images, title }) => {
           </button>
         ))}
       </div>
+      </SlideTransition>
 
       {isOpen && current[index] && createPortal(
         <div className="modal-overlay !p-0" onMouseDown={(event) => event.target === event.currentTarget && setIndex(null)}>

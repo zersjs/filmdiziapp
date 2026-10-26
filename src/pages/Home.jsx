@@ -1,35 +1,75 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import { Helmet } from 'react-helmet-async';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { FaPlay, FaStar, FaTimes, FaInfoCircle, FaPlus, FaCheck, FaFire } from 'react-icons/fa';
+import {
+  FaPlay, FaStar, FaTimes, FaInfoCircle, FaPlus, FaCheck, FaFire, FaCalendarAlt, FaMagic, FaArrowRight,
+  FaChevronLeft, FaChevronRight,
+} from 'react-icons/fa';
 import { getImageUrl } from '../services/tmdb';
+import { websiteJsonLd } from '../lib/seo';
+import Seo, { getSiteUrl } from '../components/Seo';
 import { createShortSlug } from '../services/shorts';
 import { useShortsPreview } from '../hooks/useShortsFeed';
-import { useMediaList, useTrending } from '../hooks';
+import { useMediaList, useShowsAiring, useSlideDirection, useSwipe, useTrending } from '../hooks';
+import { genreById } from '../lib/genres';
+import { pop } from '../utils/dom';
+import Segmented from '../components/UI/Segmented';
+import { compareAiring, followedShowIds, pickAiringEpisode } from '../lib/airing';
 import { useApp } from '../contexts';
 import { useToast } from '../components/UI/Toast';
 import MediaRow, { Row } from '../components/UI/MediaRow';
 import { HeroSkeleton } from '../components/UI/Loading';
 import { ErrorState } from '../components/UI/States';
 import {
-  getDetailPath, getMediaLabel, getMediaType, getReleaseDate, getTitle, getWatchPath, getYear,
+  getDetailPath, getMediaLabel, getMediaType, getReleaseDate, getTitle, getWatchPath, getYear, isGenericEpisodeName,
+  relativeDay,
 } from '../utils/helpers';
 
 const HERO_COUNT = 6;
 const HERO_INTERVAL = 9000;
 
+// Öne çıkanlar: her slaytın altında dolan ilerleme çubuğu (CSS animasyonu bitince sonraki slayta
+// geçilir; böylece duraklatma çubukla birebir eşleşir). Geçiş yönü tıklanan slayta göre sağdan/soldan,
+// dokunmatikte kaydırma, klavyede ←/→. Fareyle üzerine gelince, odaktayken veya sekme gizliyken durur.
 const Hero = ({ items }) => {
-  const [index, setIndex] = useState(0);
-  const [paused, setPaused] = useState(false);
+  const [slide, setSlide] = useState({ index: 0, previous: null, direction: 1 });
+  const [hovered, setHovered] = useState(false);
+  const [focused, setFocused] = useState(false);
+  const [hidden, setHidden] = useState(() => typeof document !== 'undefined' && document.visibilityState === 'hidden');
+  const heroRef = useRef(null);
   const { actions } = useApp();
   const { toast } = useToast();
+  const { index, previous, direction } = slide;
   const item = items[index];
+  const paused = hovered || focused || hidden;
+
+  const goTo = useCallback((target, dir) => {
+    setSlide(current => {
+      const next = (target + items.length) % items.length;
+      if (next === current.index) return current;
+      return { index: next, previous: current.index, direction: dir ?? (next > current.index ? 1 : -1) };
+    });
+  }, [items.length]);
+
+  const step = useCallback((delta) => {
+    setSlide(current => {
+      const next = (current.index + delta + items.length) % items.length;
+      return { index: next, previous: current.index, direction: delta };
+    });
+  }, [items.length]);
+
+  useSwipe(heroRef, step);
 
   useEffect(() => {
-    if (paused || items.length < 2) return undefined;
-    const timer = setTimeout(() => setIndex(i => (i + 1) % items.length), HERO_INTERVAL);
-    return () => clearTimeout(timer);
-  }, [index, paused, items.length]);
+    const onVisibility = () => setHidden(document.visibilityState === 'hidden');
+    document.addEventListener('visibilitychange', onVisibility);
+    return () => document.removeEventListener('visibilitychange', onVisibility);
+  }, []);
+
+  // Sıradaki görseli önceden indir: geçişte boş kare görünmesin.
+  useEffect(() => {
+    const upcoming = items[(index + 1) % items.length];
+    if (upcoming?.backdrop_path) new Image().src = getImageUrl(upcoming.backdrop_path, window.innerWidth > 900 ? 'w1280' : 'w780');
+  }, [index, items]);
 
   if (!item) return null;
 
@@ -37,38 +77,68 @@ const Hero = ({ items }) => {
   const title = getTitle(item);
   const year = getYear(getReleaseDate(item));
   const inList = actions.isWatchLater(item.id, type);
+  const genres = (item.genre_ids || []).map(id => genreById(type, id)?.name).filter(Boolean).slice(0, 2);
+  const dir = direction > 0 ? 'next' : 'prev';
 
-  const toggleList = () => {
+  const toggleList = (event) => {
+    pop(event.currentTarget);
     const added = actions.toggleWatchLater(item, type);
     toast.success(added ? 'İzleme listene eklendi' : 'İzleme listenden çıkarıldı', 2000);
   };
 
+  const backdrop = (entry, className, eager) => (
+    <img
+      src={getImageUrl(entry.backdrop_path, 'w1280')}
+      srcSet={`${getImageUrl(entry.backdrop_path, 'w780')} 780w, ${getImageUrl(entry.backdrop_path, 'w1280')} 1280w, ${getImageUrl(entry.backdrop_path, 'original')} 1920w`}
+      sizes="100vw"
+      alt=""
+      className={className}
+      fetchpriority={eager ? 'high' : 'auto'}
+    />
+  );
+
   return (
     <section
-      className="hero"
-      onMouseEnter={() => setPaused(true)}
-      onMouseLeave={() => setPaused(false)}
+      ref={heroRef}
+      className={`hero ${paused ? 'is-paused' : ''}`}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      // Yalnızca klavye odağı durdurur; fareyle tıklanan düğmede kalan odak slaytları dondurmasın.
+      onFocus={(event) => setFocused(!!event.target.matches?.(':focus-visible'))}
+      onBlur={(event) => { if (!event.currentTarget.contains(event.relatedTarget)) setFocused(false); }}
+      onKeyDown={(event) => {
+        if (event.key === 'ArrowRight') step(1);
+        if (event.key === 'ArrowLeft') step(-1);
+      }}
       aria-roledescription="carousel"
       aria-label="Öne çıkanlar"
     >
-      <div className="hero-bg" key={`bg-${item.id}`}>
-        <img
-          src={getImageUrl(item.backdrop_path, 'w1280')}
-          srcSet={`${getImageUrl(item.backdrop_path, 'w780')} 780w, ${getImageUrl(item.backdrop_path, 'w1280')} 1280w, ${getImageUrl(item.backdrop_path, 'original')} 1920w`}
-          sizes="100vw"
-          alt=""
-          fetchpriority={index === 0 ? 'high' : 'auto'}
-        />
+      <div className="hero-bg">
+        {previous !== null && items[previous] && (
+          <div className="hero-bg-layer is-leaving" key={`bg-${items[previous].id}`} aria-hidden="true">
+            {backdrop(items[previous], '', false)}
+          </div>
+        )}
+        <div
+          className={`hero-bg-layer ${previous !== null ? `is-entering ${dir}` : ''}`}
+          key={`bg-${item.id}`}
+          onAnimationEnd={(event) => {
+            if (event.target === event.currentTarget) setSlide(current => ({ ...current, previous: null }));
+          }}
+        >
+          {backdrop(item, '', index === 0)}
+        </div>
       </div>
 
       <div className="hero-content container-custom">
-        <div className="hero-inner" key={`content-${item.id}`}>
+        <div className={`hero-inner ${previous !== null ? `slide-${dir}` : ''}`} key={`content-${item.id}`} aria-live="polite">
           <div className="meta-row">
             <span className="badge">{getMediaLabel(type)}</span>
             {year && <span>{year}</span>}
             {item.vote_average > 0 && (
               <span className="rating"><FaStar className="text-[11px]" /> {item.vote_average.toFixed(1)}</span>
             )}
+            {genres.length > 0 && <span className="hidden sm:inline">{genres.join(' · ')}</span>}
           </div>
           <h1 className="hero-title">{title}</h1>
           {item.overview && <p className="hero-desc line-clamp-3">{item.overview}</p>}
@@ -89,22 +159,42 @@ const Hero = ({ items }) => {
               {inList ? <FaCheck /> : <FaPlus />}
             </button>
           </div>
-          {items.length > 1 && (
-            <div className="hero-dots" role="tablist" aria-label="Öne çıkan içerik seç">
+        </div>
+
+        {items.length > 1 && (
+          <div className="hero-controls">
+            <div className="hero-progress" role="group" aria-label="Öne çıkan içerik seç">
               {items.map((entry, i) => (
                 <button
                   key={entry.id}
                   type="button"
-                  role="tab"
-                  aria-selected={i === index}
-                  aria-label={getTitle(entry)}
-                  className={`hero-dot ${i === index ? 'active' : ''}`}
-                  onClick={() => setIndex(i)}
-                />
+                  aria-label={`${i + 1}. ${getTitle(entry)}`}
+                  aria-current={i === index ? 'true' : undefined}
+                  className={`hero-progress-item ${i < index ? 'done' : ''}`}
+                  onClick={() => goTo(i)}
+                >
+                  {i === index && (
+                    <span
+                      key={`fill-${index}`}
+                      className="hero-progress-fill"
+                      style={{ animationDuration: `${HERO_INTERVAL}ms` }}
+                      onAnimationEnd={() => step(1)}
+                    />
+                  )}
+                </button>
               ))}
             </div>
-          )}
-        </div>
+            <div className="hero-arrows">
+              <button type="button" className="icon-btn bordered" onClick={() => step(-1)} aria-label="Önceki">
+                <FaChevronLeft />
+              </button>
+              <span className="hero-counter" aria-hidden="true">{index + 1} / {items.length}</span>
+              <button type="button" className="icon-btn bordered" onClick={() => step(1)} aria-label="Sonraki">
+                <FaChevronRight />
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </section>
   );
@@ -156,6 +246,59 @@ const ContinueWatchingRow = () => {
   );
 };
 
+// Kitaplıktaki dizilerin yeni ya da yaklaşan bölümleri. Bilgi yalnızca TMDB'den okunur;
+// hiçbir yere kayıt veya bildirim gönderilmez.
+const NewEpisodesRow = () => {
+  const { state } = useApp();
+  const ids = useMemo(() => followedShowIds(state), [state]);
+  const results = useShowsAiring(ids);
+  const now = new Date();
+  // Hepsi gelmeden çizilmez: sıralı satıra tek tek kart eklemek kaydırma konumunu oynatıyordu.
+  if (results.some(result => result.isLoading)) return null;
+  const entries = results
+    .map(result => result.data)
+    .filter(Boolean)
+    .map(show => ({ show, ...pickAiringEpisode(show, now) }))
+    .filter(entry => entry.kind)
+    .sort(compareAiring);
+
+  if (!entries.length) return null;
+
+  return (
+    <Row title="Takip ettiklerinde yeni bölümler" icon={<FaCalendarAlt className="text-[0.8em] text-white/50" />}>
+      {entries.map(({ show, kind, episode }) => {
+        const aired = kind === 'aired';
+        const image = episode.still_path ? getImageUrl(episode.still_path, 'w300') : show.backdrop_path && getImageUrl(show.backdrop_path, 'w780');
+        const href = aired
+          ? getWatchPath(show, 'tv', { season: episode.season_number, episode: episode.episode_number })
+          : `${getDetailPath(show, 'tv')}?tab=episodes`;
+        return (
+          <div key={show.id} className="row-item wide">
+            <Link to={href} className="cw-card">
+              <div className="cw-thumb">
+                {image && <img src={image} alt="" loading="lazy" />}
+                <span className={`episode-badge ${aired ? 'new' : ''}`}>
+                  {aired ? 'Yeni bölüm' : relativeDay(episode.air_date, now)}
+                </span>
+                <div className="cw-play">
+                  {aired && <span className="cw-play-icon"><FaPlay /></span>}
+                  <span className="min-w-0">
+                    <span className="block truncate text-sm font-bold">{getTitle(show)}</span>
+                    <span className="block truncate text-xs text-white/60">
+                      S{episode.season_number} · B{episode.episode_number}
+                      {isGenericEpisodeName(episode.name) ? '' : ` · ${episode.name}`}
+                    </span>
+                  </span>
+                </div>
+              </div>
+            </Link>
+          </div>
+        );
+      })}
+    </Row>
+  );
+};
+
 const ShortsRow = () => {
   const navigate = useNavigate();
   const { data = [], isLoading } = useShortsPreview();
@@ -191,6 +334,19 @@ const ShortsRow = () => {
   );
 };
 
+const RecommendBanner = () => (
+  <div className="container-custom mb-9 lg:mb-12">
+    <Link to="/ne-izlesem" className="promo-card">
+      <span className="promo-icon"><FaMagic /></span>
+      <span className="min-w-0 flex-1">
+        <span className="block text-[15px] font-bold">Ne izleyeceğine karar veremedin mi?</span>
+        <span className="block text-sm text-white/55">Ruh haline, vaktine ve platformlarına göre birkaç saniyede öneri al.</span>
+      </span>
+      <FaArrowRight className="promo-arrow" />
+    </Link>
+  </div>
+);
+
 const TRENDING_WINDOWS = [
   { value: 'day', label: 'Bugün' },
   { value: 'week', label: 'Bu hafta' },
@@ -201,6 +357,7 @@ const Home = () => {
   const [trendWindow, setTrendWindow] = useState('day');
   const trendingDay = useTrending('day');
   const trending = useTrending(trendWindow);
+  const trendDirection = useSlideDirection(trendWindow, TRENDING_WINDOWS.map(w => w.value));
   const popularMovies = useMediaList('movie', 'popular');
   const popularSeries = useMediaList('tv', 'popular');
   const nowPlaying = useMediaList('movie', 'now_playing');
@@ -217,15 +374,12 @@ const Home = () => {
 
   return (
     <>
-      <Helmet>
-        <title>SINEFIX - Film ve Dizi Platformu</title>
-        <meta name="description" content="Popüler filmleri ve dizileri keşfedin, fragmanları izleyin, izleme listenizi oluşturun." />
-      </Helmet>
+      <Seo path="/" jsonLd={[websiteJsonLd(getSiteUrl())]} />
 
       {trendingDay.isLoading ? (
         <HeroSkeleton />
       ) : trendingDay.isError ? (
-        <div className="container-custom">
+        <div className="container-custom below-header">
           <ErrorState description="TMDB'ye ulaşılamadı. Bağlantınızı kontrol edip tekrar deneyin." onRetry={trendingDay.refetch} />
         </div>
       ) : (
@@ -234,6 +388,7 @@ const Home = () => {
 
       <div className="pt-4 lg:pt-2">
         <ContinueWatchingRow />
+        <NewEpisodesRow />
 
         {state.watchLater.length > 0 && (
           <MediaRow title="İzleme listen" items={state.watchLater} link="/watch-later" showType />
@@ -244,18 +399,21 @@ const Home = () => {
           items={trending.data?.results}
           loading={trending.isLoading}
           showType
+          contentKey={trendWindow}
+          contentDirection={trendDirection}
           actions={(
-            <div className="segmented mr-1 hidden xs:inline-flex">
-              {TRENDING_WINDOWS.map(w => (
-                <button key={w.value} type="button" className={trendWindow === w.value ? 'active' : ''} onClick={() => setTrendWindow(w.value)}>
-                  {w.label}
-                </button>
-              ))}
-            </div>
+            <Segmented
+              ariaLabel="Trend dönemi"
+              className="mr-1 hidden xs:inline-flex"
+              options={TRENDING_WINDOWS}
+              value={trendWindow}
+              onChange={setTrendWindow}
+            />
           )}
         />
 
         <ShortsRow />
+        <RecommendBanner />
 
         <MediaRow title="Popüler filmler" items={popularMovies.data?.results} loading={popularMovies.isLoading} mediaType="movie" link="/movies" />
         <MediaRow title="Popüler diziler" items={popularSeries.data?.results} loading={popularSeries.isLoading} mediaType="tv" link="/series" />

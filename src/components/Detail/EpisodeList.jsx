@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { FaTv, FaStar } from 'react-icons/fa';
+import { FaTv, FaStar, FaCheck } from 'react-icons/fa';
 import { getImageUrl } from '../../services/tmdb';
 import { formatDate, formatRuntime, isFutureDate } from '../../utils/helpers';
 import { Spinner } from '../UI/Loading';
@@ -30,7 +30,10 @@ export const SeasonSelect = ({ seasons, value, onChange, className = '' }) => (
   </select>
 );
 
-const EpisodeList = ({ episodes, loading, error, getHref, current, dense = false, replace = false }) => {
+// isWatched / onToggleWatched verilirse her yayınlanmış bölümün yanında "izlendi" düğmesi çıkar.
+const EpisodeList = ({
+  episodes, loading, error, getHref, current, dense = false, replace = false, isWatched, onToggleWatched,
+}) => {
   if (loading) {
     return (
       <div className="flex justify-center py-12">
@@ -52,6 +55,8 @@ const EpisodeList = ({ episodes, loading, error, getHref, current, dense = false
       {episodes.map(episode => {
         const upcoming = !episode.air_date || isFutureDate(episode.air_date);
         const isCurrent = current === episode.episode_number;
+        const watched = !upcoming && !!isWatched?.(episode);
+        const trackable = !upcoming && !!onToggleWatched;
         const runtime = formatRuntime(episode.runtime);
         const content = (
           <>
@@ -62,6 +67,7 @@ const EpisodeList = ({ episodes, loading, error, getHref, current, dense = false
                 <div className="flex h-full items-center justify-center text-white/15"><FaTv /></div>
               )}
               <span className="episode-num">B{episode.episode_number}</span>
+              {watched && <span className="episode-watched-mark" aria-hidden="true"><FaCheck /> İzlendi</span>}
             </div>
             <div className="min-w-0 self-center">
               <p className={`font-semibold text-white/90 ${dense ? 'line-clamp-2 text-[13px] leading-snug' : 'line-clamp-1 text-sm sm:text-[15px]'}`}>
@@ -89,15 +95,29 @@ const EpisodeList = ({ episodes, loading, error, getHref, current, dense = false
           </>
         );
 
-        const className = `episode ${dense ? 'dense' : ''} ${isCurrent ? 'current' : ''} ${upcoming ? 'disabled' : ''}`;
+        const className = [
+          'episode', dense && 'dense', isCurrent && 'current', upcoming && 'disabled', watched && 'watched', trackable && 'trackable',
+        ].filter(Boolean).join(' ');
         return (
-          <li key={episode.id ?? episode.episode_number}>
+          <li key={episode.id ?? episode.episode_number} className="episode-row">
             {upcoming ? (
               <div className={className} aria-disabled="true">{content}</div>
             ) : (
               <Link to={getHref(episode)} replace={replace} className={className} aria-current={isCurrent ? 'true' : undefined}>
                 {content}
               </Link>
+            )}
+            {trackable && (
+              <button
+                type="button"
+                className={`episode-check ${watched ? 'on' : ''}`}
+                aria-pressed={watched}
+                aria-label={`${episode.episode_number}. bölüm ${watched ? 'izlendi işaretini kaldır' : 'izlendi olarak işaretle'}`}
+                title={watched ? 'İzlendi' : 'İzlendi olarak işaretle'}
+                onClick={(event) => onToggleWatched(episode, event)}
+              >
+                <FaCheck />
+              </button>
             )}
           </li>
         );

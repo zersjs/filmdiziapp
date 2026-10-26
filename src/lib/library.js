@@ -2,7 +2,9 @@
 // senkronizasyon sunucusu (api/library.js) bu modülü kullanır; bu yüzden
 // tarayıcıya veya Node'a özgü API içermez.
 //
-// Kitaplık = üç liste + her liste için "silinenler" (tombstone) kaydı.
+// Kitaplık = dört liste + her liste için "silinenler" (tombstone) kaydı.
+// "watched": izlenen filmler ve dizilerde izlenen bölümler (episodes: ["1x1", "1x2", ...]).
+// Bir dizinin bölüm listesi tek bir öğedir; iki cihazda aynı anda değişirse en son değişiklik kazanır.
 // Silinenler, iki cihaz birleştirilirken bir cihazda silinen öğenin diğer
 // cihazdan geri gelmesini engeller.
 
@@ -10,7 +12,11 @@ export const LISTS = {
   favorites: { limit: 500 },
   watchLater: { limit: 500 },
   continueWatching: { limit: 30 },
+  watched: { limit: 1000 },
 };
+
+export const MAX_EPISODES_PER_SHOW = 2000;
+const EPISODE_KEY = /^(\d{1,4})x(\d{1,5})$/;
 
 export const LIST_NAMES = Object.keys(LISTS);
 
@@ -28,11 +34,25 @@ const toTime = (value) => {
 export const itemTime = (item) => Math.max(toTime(item.updatedAt), toTime(item.addedAt));
 
 export const emptyLibrary = () => ({
-  favorites: [],
-  watchLater: [],
-  continueWatching: [],
-  removed: { favorites: {}, watchLater: {}, continueWatching: {} },
+  ...Object.fromEntries(LIST_NAMES.map(list => [list, []])),
+  removed: Object.fromEntries(LIST_NAMES.map(list => [list, {}])),
 });
+
+// "3x12" biçimindeki bölüm anahtarlarını doğrular, tekrarları atar ve sezon/bölüm sırasına dizer.
+export const sanitizeEpisodes = (raw) => {
+  if (!Array.isArray(raw)) return [];
+  const unique = new Map();
+  for (const value of raw) {
+    const match = typeof value === 'string' ? EPISODE_KEY.exec(value) : null;
+    if (!match) continue;
+    const season = Number(match[1]);
+    const episode = Number(match[2]);
+    if (episode < 1) continue;
+    unique.set(`${season}x${episode}`, season * 100000 + episode);
+    if (unique.size >= MAX_EPISODES_PER_SHOW) break;
+  }
+  return [...unique.entries()].sort((a, b) => a[1] - b[1]).map(([key]) => key);
+};
 
 const text = (value, max = MAX_TEXT) =>
   typeof value === 'string' && value.length > 0 ? value.slice(0, max) : null;
@@ -77,6 +97,7 @@ export const sanitizeItem = (raw) => {
   if (episode !== null) item.episode = episode;
   const episodeName = text(raw.episodeName);
   if (episodeName) item.episodeName = episodeName;
+  if (item.media_type === 'tv' && Array.isArray(raw.episodes)) item.episodes = sanitizeEpisodes(raw.episodes);
 
   return item;
 };

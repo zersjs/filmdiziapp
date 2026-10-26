@@ -1,13 +1,41 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { FaChevronLeft, FaChevronRight } from 'react-icons/fa';
 import MovieCard from './MovieCard';
 import { RowSkeleton } from './Loading';
 
+// Ekranın altında başlayan satırlar görünür alana girince belirir. İlk çizimde
+// görünür olan satırlar hiç gizlenmez (içerik kayması ve yanıp sönme olmaz).
+const useReveal = () => {
+  const ref = useRef(null);
+  const [state, setState] = useState('idle');
+
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el || typeof IntersectionObserver === 'undefined') return undefined;
+    if (el.getBoundingClientRect().top < window.innerHeight) return undefined;
+    setState('pending');
+    const observer = new IntersectionObserver((entries) => {
+      if (entries.some(entry => entry.isIntersecting)) {
+        setState('revealed');
+        observer.disconnect();
+      }
+    }, { rootMargin: '0px 0px -8% 0px' });
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
+
+  return [ref, state === 'pending' ? 'reveal-pending' : state === 'revealed' ? 'revealed' : ''];
+};
+
 // Yatay kaydırmalı içerik satırı. Kaydırıcı ekran kenarına kadar uzanır,
 // ilk kart ise sayfa kapsayıcısıyla hizalı başlar.
-export const Row = ({ title, icon, link, linkLabel = 'Tümü', actions, loading, skeleton = 'poster', children }) => {
+// contentKey/contentDirection: içerik değişince (ör. Bugün → Bu hafta) kartlar o yönden kayarak gelir.
+export const Row = ({
+  title, icon, link, linkLabel = 'Tümü', actions, loading, skeleton = 'poster', contentKey, contentDirection = 1, children,
+}) => {
   const scrollerRef = useRef(null);
+  const [revealRef, revealClass] = useReveal();
   const [edges, setEdges] = useState({ start: true, end: false });
   const itemCount = React.Children.count(children);
 
@@ -36,7 +64,7 @@ export const Row = ({ title, icon, link, linkLabel = 'Tümü', actions, loading,
   };
 
   return (
-    <section className="row">
+    <section className={`row ${revealClass}`} ref={revealRef}>
       <div className="row-header container-custom">
         <h2 className="row-title section-title">
           {icon}
@@ -56,7 +84,12 @@ export const Row = ({ title, icon, link, linkLabel = 'Tümü', actions, loading,
       {loading ? (
         <RowSkeleton variant={skeleton} />
       ) : (
-        <div className="row-scroller" ref={scrollerRef} onScroll={updateEdges}>
+        <div
+          key={contentKey}
+          className={`row-scroller ${contentKey !== undefined ? `slide-in-${contentDirection > 0 ? 'next' : 'prev'}` : ''}`}
+          ref={scrollerRef}
+          onScroll={updateEdges}
+        >
           {children}
         </div>
       )}
@@ -64,13 +97,17 @@ export const Row = ({ title, icon, link, linkLabel = 'Tümü', actions, loading,
   );
 };
 
-const MediaRow = ({ items = [], mediaType, showType = false, limit = 20, emptyHidden = true, ...rowProps }) => {
+const MediaRow = ({ items = [], mediaType, showType = false, limit = 20, emptyHidden = true, currentId, ...rowProps }) => {
   if (!rowProps.loading && emptyHidden && items.length === 0) return null;
 
   return (
     <Row {...rowProps}>
       {items.slice(0, limit).map(item => (
-        <div key={`${item.media_type || mediaType}-${item.id}`} className="row-item">
+        <div
+          key={`${item.media_type || mediaType}-${item.id}`}
+          className={`row-item ${item.id === currentId ? 'is-current' : ''}`}
+          aria-current={item.id === currentId ? 'page' : undefined}
+        >
           <MovieCard item={item} mediaType={mediaType} showType={showType} />
         </div>
       ))}

@@ -8,6 +8,7 @@ import ErrorBoundary from './components/ErrorBoundary';
 import Layout from './components/Layout/Layout';
 import { PageLoader } from './components/UI/Loading';
 import Home from './pages/Home';
+import { routeKey } from './utils/dom';
 
 const Movies = lazy(() => import('./pages/Movies'));
 const Series = lazy(() => import('./pages/Series'));
@@ -19,12 +20,14 @@ const Person = lazy(() => import('./pages/Person'));
 const Genre = lazy(() => import('./pages/Genre'));
 const Favorites = lazy(() => import('./pages/Favorites'));
 const WatchLater = lazy(() => import('./pages/WatchLater'));
+const Watched = lazy(() => import('./pages/Watched'));
 const Contact = lazy(() => import('./pages/Contact'));
 const PrivacyPolicy = lazy(() => import('./pages/PrivacyPolicy'));
 const Terms = lazy(() => import('./pages/Terms'));
 const FAQ = lazy(() => import('./pages/FAQ'));
 const Settings = lazy(() => import('./pages/Settings'));
 const Shorts = lazy(() => import('./pages/Shorts'));
+const Recommend = lazy(() => import('./pages/Recommend'));
 const NotFound = lazy(() => import('./pages/NotFound'));
 
 const queryClient = new QueryClient({
@@ -52,35 +55,42 @@ const ScrollToTop = () => {
 
 const AppRoutes = () => {
   const { pathname } = useLocation();
+  const viewKey = routeKey(pathname);
 
   return (
     <Layout>
       <ErrorBoundary resetKey={pathname}>
         <Suspense fallback={<PageLoader />}>
-          <Routes>
-            <Route path="/" element={<Home />} />
-            <Route path="/movies" element={<Movies />} />
-            <Route path="/series" element={<Series />} />
-            <Route path="/movie/:id/:slug?" element={<MovieDetail />} />
-            <Route path="/tv/:id/:slug?" element={<SeriesDetail />} />
-            <Route path="/watch/:type/:id/:slug?" element={<Watch />} />
-            <Route path="/search" element={<Search />} />
-            <Route path="/person/:id/:slug?" element={<Person />} />
-            <Route path="/genre/:type/:id" element={<Genre />} />
-            <Route path="/favorites" element={<Favorites />} />
-            <Route path="/watch-later" element={<WatchLater />} />
-            <Route path="/iletisim" element={<Contact />} />
-            <Route path="/gizlilik-politikasi" element={<PrivacyPolicy />} />
-            <Route path="/kullanim-kosullari" element={<Terms />} />
-            <Route path="/sss" element={<FAQ />} />
-            <Route path="/ayarlar" element={<Settings />} />
-            <Route path="/sahneler/:slug?" element={<Shorts />} />
-            {/* Hesap sistemi kaldırıldı; eski bağlantılar kitaplık ayarlarına gider */}
-            {['/login', '/register', '/forgot-password', '/profile/*'].map(path => (
-              <Route key={path} path={path} element={<Navigate to="/ayarlar" replace />} />
-            ))}
-            <Route path="*" element={<NotFound />} />
-          </Routes>
+          <div className="route-view" key={viewKey}>
+            <Routes>
+              <Route path="/" element={<Home />} />
+              <Route path="/movies" element={<Movies />} />
+              <Route path="/movies/genre/:genreSlug" element={<Movies />} />
+              <Route path="/series" element={<Series />} />
+              <Route path="/series/genre/:genreSlug" element={<Series />} />
+              <Route path="/movie/:id/:slug?" element={<MovieDetail />} />
+              <Route path="/tv/:id/:slug?" element={<SeriesDetail />} />
+              <Route path="/watch/:type/:id/:slug?" element={<Watch />} />
+              <Route path="/search" element={<Search />} />
+              <Route path="/person/:id/:slug?" element={<Person />} />
+              <Route path="/genre/:type/:id" element={<Genre />} />
+              <Route path="/favorites" element={<Favorites />} />
+              <Route path="/watch-later" element={<WatchLater />} />
+              <Route path="/izlediklerim" element={<Watched />} />
+              <Route path="/iletisim" element={<Contact />} />
+              <Route path="/gizlilik-politikasi" element={<PrivacyPolicy />} />
+              <Route path="/kullanim-kosullari" element={<Terms />} />
+              <Route path="/sss" element={<FAQ />} />
+              <Route path="/ayarlar" element={<Settings />} />
+              <Route path="/sahneler/:slug?" element={<Shorts />} />
+              <Route path="/ne-izlesem" element={<Recommend />} />
+              {/* Hesap sistemi kaldırıldı; eski bağlantılar kitaplık ayarlarına gider */}
+              {['/login', '/register', '/forgot-password', '/profile/*'].map(path => (
+                <Route key={path} path={path} element={<Navigate to="/ayarlar" replace />} />
+              ))}
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </div>
         </Suspense>
       </ErrorBoundary>
     </Layout>

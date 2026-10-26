@@ -1,10 +1,10 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Helmet } from 'react-helmet-async';
 import {
   FaBookmark, FaHeart, FaPlay, FaSyncAlt, FaCopy, FaEye, FaEyeSlash, FaDownload, FaUpload, FaTrash, FaLink, FaShieldAlt,
 } from 'react-icons/fa';
 import { useApp } from '../contexts';
+import Seo from '../components/Seo';
 import { useToast } from '../components/UI/Toast';
 import { ConfirmModal } from '../components/UI/Modal';
 import { SYNC_ERROR_MESSAGES, SyncError, formatSyncKey, isValidSyncKey, normalizeSyncKey } from '../services/sync';
@@ -206,6 +206,7 @@ const Settings = () => {
     { label: 'İzleme listesi', value: state.watchLater.length, to: '/watch-later', icon: FaBookmark },
     { label: 'Favoriler', value: state.favorites.length, to: '/favorites', icon: FaHeart },
     { label: 'Devam edilenler', value: state.continueWatching.length, to: '/', icon: FaPlay },
+    { label: 'İzlenenler', value: state.watched.length, to: '/izlediklerim', icon: FaEye },
   ];
 
   const download = () => {
@@ -236,15 +237,13 @@ const Settings = () => {
 
   return (
     <>
-      <Helmet>
-        <title>Kitaplık ve senkronizasyon - SINEFIX</title>
-      </Helmet>
+      <Seo title="Kitaplık ve senkronizasyon" noindex />
 
       <div className="page container-custom max-w-3xl">
         <h1 className="page-title">Kitaplık ve senkronizasyon</h1>
         <p className="page-subtitle">Hesap gerekmez. Listelerin bu tarayıcıda saklanır.</p>
 
-        <div className="mt-6 grid grid-cols-3 gap-2 sm:gap-3">
+        <div className="mt-6 grid grid-cols-2 gap-2 sm:grid-cols-4 sm:gap-3">
           {stats.map(({ label, value, to, icon: Icon }) => (
             <Link key={label} to={to} className="surface p-3 hover:border-white/15 sm:p-4">
               <Icon className="text-sm text-white/40" />
@@ -274,7 +273,7 @@ const Settings = () => {
             </div>
           </Section>
 
-          <Section title="Verileri temizle" description="İzleme listesi, favoriler ve devam edilenler silinir. Senkronizasyon açıksa diğer cihazlardan da silinir.">
+          <Section title="Verileri temizle" description="İzleme listesi, favoriler, devam edilenler ve izlenenler silinir. Senkronizasyon açıksa diğer cihazlardan da silinir.">
             <button type="button" className="btn btn-danger btn-sm" onClick={() => setConfirmClear(true)}>
               <FaTrash className="text-xs" /> Tüm kitaplığı temizle
             </button>

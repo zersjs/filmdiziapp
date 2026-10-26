@@ -1,13 +1,14 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useReducer, useRef, useState } from 'react';
 import { getMediaType, getReleaseDate, getTitle } from '../utils/helpers';
 import {
-  LISTS, LIST_NAMES, emptyLibrary, itemKey, librarySignature, mergeLibraries, sanitizeLibrary,
+  LISTS, LIST_NAMES, emptyLibrary, itemKey, librarySignature, mergeLibraries, sanitizeEpisodes, sanitizeLibrary,
 } from '../lib/library';
+import { episodeKey } from '../lib/episodes';
 import {
   SyncError, deleteRemoteLibrary, fetchRemoteLibrary, generateSyncKey, isValidSyncKey, normalizeSyncKey, pushLibrary,
 } from '../services/sync';
 
-// Kullanıcının kitaplığı (favoriler, izleme listesi, izlemeye devam et).
+// Kullanıcının kitaplığı (favoriler, izleme listesi, izlemeye devam et, izlenenler).
 // Tek kaynak burasıdır; veriler tarayıcıda saklanır, isteğe bağlı olarak
 // senkron koduyla diğer cihazlarla eşitlenir.
 
@@ -15,6 +16,7 @@ const STORAGE_KEYS = {
   favorites: 'favorites',
   watchLater: 'watchLater',
   continueWatching: 'continueWatching',
+  watched: 'watched',
   removed: 'libraryRemoved',
   syncKey: 'syncKey',
   lastSyncedAt: 'syncLastSyncedAt',
@@ -101,6 +103,27 @@ export const libraryReducer = (state, action) => {
         [action.list]: [],
         removed: { ...state.removed, [action.list]: { ...state.removed[action.list], ...tombstones } },
       };
+    }
+    // Dizide bölüm işaretleri; her zaman güncel state üzerinden hesaplanır (eski kapanışlarla
+    // tetiklenen "Geri al" / "öncekileri de işaretle" eylemleri değişiklik kaybetmesin).
+    case 'episodes': {
+      const key = `tv-${action.show.id}`;
+      const entry = state.watched.find(item => itemKey(item) === key);
+      const episodes = new Set(entry?.episodes || []);
+      action.episodes.forEach(({ season, episode }) => {
+        if (action.watched) episodes.add(episodeKey(season, episode));
+        else episodes.delete(episodeKey(season, episode));
+      });
+      const next = sanitizeEpisodes([...episodes]);
+      if (next.length === 0) {
+        return entry ? libraryReducer(state, { type: 'remove', list: 'watched', id: action.show.id, mediaType: 'tv', now }) : state;
+      }
+      return libraryReducer(state, {
+        type: 'add',
+        list: 'watched',
+        now,
+        item: { ...toLibraryItem(action.show, 'tv'), addedAt: entry?.addedAt || now, episodes: next },
+      });
     }
     case 'replace':
       return action.library;
@@ -268,6 +291,16 @@ export const AppProvider = ({ children }) => {
     return !exists;
   }, [library]);
 
+  const watchedEntry = useCallback(
+    (id, mediaType) => library.watched.find(entry => sameItem(entry, id, mediaType)) || null,
+    [library]
+  );
+
+  // Bölüm işaretlerini günceller; hiç bölüm kalmazsa dizi izlenenlerden çıkar (silme kaydıyla).
+  const setEpisodes = useCallback((show, episodes, watched) => {
+    dispatch({ type: 'episodes', show, episodes, watched });
+  }, []);
+
   const actions = useMemo(() => ({
     isFavorite: (id, mediaType) => has('favorites', id, mediaType),
     toggleFavorite: (item, mediaType) => toggle('favorites', item, mediaType),
@@ -303,6 +336,21 @@ export const AppProvider = ({ children }) => {
       dispatch({ type: 'remove', list: 'continueWatching', id, mediaType }),
     clearContinueWatching: () => dispatch({ type: 'clear', list: 'continueWatching' }),
 
+    // Filmler: izlendi işareti. Diziler: bölüm bazında.
+    isWatched: (id, mediaType) => !!watchedEntry(id, mediaType),
+    toggleWatched: (item, mediaType) => toggle('watched', item, mediaType),
+    getWatchedEpisodes: (showId) => new Set(watchedEntry(showId, 'tv')?.episodes || []),
+    isEpisodeWatched: (showId, season, episode) =>
+      !!watchedEntry(showId, 'tv')?.episodes?.includes(episodeKey(season, episode)),
+    setEpisodesWatched: (show, episodes, watched = true) => setEpisodes(show, episodes, watched),
+    toggleEpisodeWatched: (show, season, episode) => {
+      const watched = !watchedEntry(show.id, 'tv')?.episodes?.includes(episodeKey(season, episode));
+      setEpisodes(show, [{ season, episode }], watched);
+      return watched;
+    },
+    removeWatched: (id, mediaType) => dispatch({ type: 'remove', list: 'watched', id, mediaType }),
+    clearWatched: () => dispatch({ type: 'clear', list: 'watched' }),
+
     clearAll: () => LIST_NAMES.forEach(list => dispatch({ type: 'clear', list })),
     importLibrary: (data) => {
       const incoming = sanitizeLibrary(data?.library ?? data);
@@ -316,7 +364,7 @@ export const AppProvider = ({ children }) => {
       exportedAt: new Date().toISOString(),
       library,
     }),
-  }), [has, toggle, library]);
+  }), [has, toggle, library, watchedEntry, setEpisodes]);
 
   const value = useMemo(() => ({ state: library, actions, sync }), [library, actions, sync]);
 

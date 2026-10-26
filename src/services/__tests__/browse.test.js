@@ -1,13 +1,23 @@
 import { describe, expect, test } from 'vitest';
-import { buildDiscoverParams, parseBrowseParams } from '../browse';
+import { buildDiscoverParams, hasRefiningFilters, parseBrowseParams } from '../browse';
 
 const today = new Date('2026-10-22T12:00:00Z');
 
 describe('parseBrowseParams', () => {
   test('varsayılanlar', () => {
     expect(parseBrowseParams('movie', new URLSearchParams())).toEqual({
-      sort: 'popular', genre: '', year: '', rating: '', page: 1,
+      sort: 'popular', genre: '', year: '', rating: '', provider: '', page: 1,
     });
+  });
+
+  test('tür adres yolundan gelir, sorgudaki genre yok sayılır', () => {
+    const params = parseBrowseParams('movie', new URLSearchParams('genre=99'), 28);
+    expect(params.genre).toBe('28');
+  });
+
+  test('geçersiz platform kimliği yok sayılır', () => {
+    expect(parseBrowseParams('movie', new URLSearchParams('provider=8')).provider).toBe('8');
+    expect(parseBrowseParams('movie', new URLSearchParams('provider=netflix')).provider).toBe('');
   });
 
   test('geçersiz sıralama ve sayfa düzeltilir', () => {
@@ -43,9 +53,24 @@ describe('buildDiscoverParams', () => {
     expect(params['vote_count.gte']).toBe(50);
   });
 
+  test('platform filtresi Türkiye abonelik kataloğunu sorgular', () => {
+    const params = buildDiscoverParams('tv', { sort: 'popular', provider: '8' }, today);
+    expect(params.with_watch_providers).toBe('8');
+    expect(params.watch_region).toBe('TR');
+    expect(params.with_watch_monetization_types).toBe('flatrate|free|ads');
+  });
+
   test('vizyondakiler tarih aralığı kullanır', () => {
     const params = buildDiscoverParams('movie', { sort: 'now_playing' }, today);
     expect(params['release_date.lte']).toBe('2026-10-22');
     expect(params['release_date.gte']).toBe('2026-09-07');
+  });
+});
+
+describe('hasRefiningFilters', () => {
+  test('yalnızca tür seçiliyse sayfa canonical kalır', () => {
+    expect(hasRefiningFilters({ sort: 'popular', genre: '28', year: '', rating: '', provider: '' })).toBe(false);
+    expect(hasRefiningFilters({ sort: 'top_rated', genre: '', year: '', rating: '', provider: '' })).toBe(true);
+    expect(hasRefiningFilters({ sort: 'popular', genre: '', year: '', rating: '', provider: '8' })).toBe(true);
   });
 });

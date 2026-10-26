@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Helmet } from 'react-helmet-async';
 import { FaEnvelope, FaPaperPlane, FaQuestionCircle } from 'react-icons/fa';
+import { StaticSeo } from '../components/Seo';
 
 const CONTACT_EMAIL = 'info@sinefix.com';
 
-const SUBJECTS = ['Öneri', 'Hata bildirimi', 'İçerik sorunu', 'Hesap', 'Diğer'];
+const SUBJECTS = ['Öneri', 'Hata bildirimi', 'İçerik sorunu', 'Senkronizasyon', 'Diğer'];
 
 // Sunucu tarafı olmadığından mesaj, kullanıcının e-posta uygulamasında hazır olarak açılır.
 const Contact = () => {
@@ -21,10 +21,7 @@ const Contact = () => {
 
   return (
     <>
-      <Helmet>
-        <title>İletişim - SINEFIX</title>
-        <meta name="description" content="SINEFIX ile iletişime geçin: öneri, hata bildirimi ve sorularınız için." />
-      </Helmet>
+      <StaticSeo path="/iletisim" />
 
       <div className="page container-custom max-w-3xl">
         <h1 className="page-title">İletişim</h1>

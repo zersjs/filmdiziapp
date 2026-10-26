@@ -23,14 +23,16 @@ export const ToastProvider = ({ children }) => {
     timers.current.delete(id);
   }, []);
 
-  const add = useCallback((message, type = 'info', duration = 3000) => {
+  // action: { label, onClick } — "Geri al" gibi tek bir eylem düğmesi; eylemli bildirim daha uzun kalır.
+  const add = useCallback((message, type = 'info', duration = 3000, action = null) => {
     const id = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
     setToasts(prev => {
       // Aynı mesaj art arda gelirse çoğaltma
       const rest = prev.filter(t => t.message !== message);
-      return [...rest, { id, message, type }].slice(-MAX_TOASTS);
+      return [...rest, { id, message, type, action }].slice(-MAX_TOASTS);
     });
-    if (duration > 0) timers.current.set(id, setTimeout(() => remove(id), duration));
+    const lifetime = action ? Math.max(duration || 0, 6000) : duration;
+    if (lifetime > 0) timers.current.set(id, setTimeout(() => remove(id), lifetime));
     return id;
   }, [remove]);
 
@@ -41,10 +43,10 @@ export const ToastProvider = ({ children }) => {
 
   const value = useMemo(() => ({
     toast: {
-      success: (message, duration) => add(message, 'success', duration),
-      error: (message, duration) => add(message, 'error', duration),
-      warning: (message, duration) => add(message, 'warning', duration),
-      info: (message, duration) => add(message, 'info', duration),
+      success: (message, duration, action) => add(message, 'success', duration, action),
+      error: (message, duration, action) => add(message, 'error', duration, action),
+      warning: (message, duration, action) => add(message, 'warning', duration, action),
+      info: (message, duration, action) => add(message, 'info', duration, action),
     },
     removeToast: remove,
   }), [add, remove]);
@@ -53,12 +55,24 @@ export const ToastProvider = ({ children }) => {
     <ToastContext.Provider value={value}>
       {children}
       <div className="toast-region" role="status" aria-live="polite">
-        {toasts.map(({ id, message, type, leaving }) => {
+        {toasts.map(({ id, message, type, leaving, action }) => {
           const Icon = ICONS[type] || FaInfoCircle;
           return (
             <div key={id} className={`toast ${type} ${leaving ? 'leaving' : ''}`}>
               <Icon className="toast-icon" />
               <span className="flex-1">{message}</span>
+              {action && (
+                <button
+                  type="button"
+                  className="toast-action"
+                  onClick={() => {
+                    action.onClick();
+                    remove(id);
+                  }}
+                >
+                  {action.label}
+                </button>
+              )}
               <button
                 type="button"
                 onClick={() => remove(id)}

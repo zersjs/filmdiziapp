@@ -5,6 +5,8 @@ import {
   FaChevronUp, FaChevronDown, FaExpand, FaCompress, FaForward, FaVolumeMute, FaRedo, FaExclamationTriangle,
 } from 'react-icons/fa';
 import ShortSlide from '../components/Shorts/ShortSlide';
+import Seo from '../components/Seo';
+import { STATIC_PAGES } from '../lib/seo';
 import { useShortsFeed } from '../hooks/useShortsFeed';
 import { useGenres } from '../hooks';
 import { useApp } from '../contexts';
@@ -261,9 +263,13 @@ const Shorts = () => {
 
   return (
     <div className="shorts">
+      {/* Tek tek sahne adresleri aynı akışın kopyası; hepsi /sahneler'e canonical olur. */}
+      <Seo
+        title={title ? `${title} · Sahneler` : STATIC_PAGES['/sahneler'].title}
+        description={STATIC_PAGES['/sahneler'].description}
+        path="/sahneler"
+      />
       <Helmet>
-        <title>{title ? `${title} · Sahneler - SINEFIX` : 'Sahneler - SINEFIX'}</title>
-        <meta name="description" content="Film ve dizi fragmanlarını dikey akışta keşfet." />
         <link rel="preconnect" href="https://www.youtube-nocookie.com" />
         <link rel="preconnect" href="https://i.ytimg.com" />
       </Helmet>

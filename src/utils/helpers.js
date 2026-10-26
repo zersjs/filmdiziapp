@@ -20,6 +20,60 @@ export const isFutureDate = (dateString) => {
   return !!date && date.getTime() > Date.now();
 };
 
+// TMDB tarihleri (YYYY-AA-GG) yerel gün olarak yorumlanır; UTC kayması bir gün kaydırmasın.
+const parseLocalDate = (dateString) => {
+  const match = /^(\d{4})-(\d{2})-(\d{2})/.exec(dateString || '');
+  return match ? new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3])) : null;
+};
+
+const startOfDay = (date) => new Date(date.getFullYear(), date.getMonth(), date.getDate());
+
+export const daysUntil = (dateString, now = new Date()) => {
+  const date = parseLocalDate(dateString);
+  return date ? Math.round((startOfDay(date) - startOfDay(now)) / 86400000) : null;
+};
+
+// "bugün", "yarın", "3 gün sonra", "2 gün önce" ya da "24 Ekim Cuma"
+export const relativeDay = (dateString, now = new Date(), { weekday = true } = {}) => {
+  const days = daysUntil(dateString, now);
+  if (days === null) return '';
+  if (days === 0) return 'bugün';
+  if (days === 1) return 'yarın';
+  if (days === -1) return 'dün';
+  if (days > 1 && days < 7) return `${days} gün sonra`;
+  if (days < -1 && days > -7) return `${-days} gün önce`;
+  const date = parseLocalDate(dateString);
+  return date.toLocaleDateString('tr-TR', {
+    day: 'numeric',
+    month: 'long',
+    ...(date.getFullYear() !== now.getFullYear() ? { year: 'numeric' } : {}),
+    ...(weekday && Math.abs(days) < 60 ? { weekday: 'long' } : {}),
+  });
+};
+
+// "az önce", "5 dk önce", "3 sa önce", "dün", "4 gün önce" ya da "12 Eki"
+export const timeAgo = (value, now = new Date()) => {
+  const date = toDate(value);
+  if (!date) return '';
+  const minutes = Math.floor((now - date) / 60000);
+  if (minutes < 1) return 'az önce';
+  if (minutes < 60) return `${minutes} dk önce`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours} sa önce`;
+  const days = Math.round((startOfDay(now) - startOfDay(date)) / 86400000);
+  if (days <= 1) return 'dün';
+  if (days < 7) return `${days} gün önce`;
+  return date.toLocaleDateString('tr-TR', {
+    day: 'numeric',
+    month: 'short',
+    ...(date.getFullYear() !== now.getFullYear() ? { year: 'numeric' } : {}),
+  });
+};
+
+// TMDB'de adı girilmemiş bölümler "Bölüm 5", "5. Bölüm" ya da "Episode 5" olarak gelir.
+export const isGenericEpisodeName = (name) =>
+  !name || /^(episode|bölüm)\s*\d+$|^\d+\.\s*bölüm$/i.test(name.trim());
+
 export const formatRuntime = (minutes) => {
   if (!minutes) return null;
   const hours = Math.floor(minutes / 60);
@@ -125,21 +179,33 @@ export const getStatusText = (status) => {
   return statuses[status] || status;
 };
 
-export const createSlug = (text) => {
+const TURKISH_CHARS = {
+  'ç': 'c', 'ğ': 'g', 'ı': 'i', 'ö': 'o', 'ş': 's', 'ü': 'u',
+  'Ç': 'C', 'Ğ': 'G', 'İ': 'I', 'Ö': 'O', 'Ş': 'S', 'Ü': 'U'
+};
+
+// "Dövüş Kulübü" → "dovus-kulubu"
+export const slugify = (text) => {
   if (!text) return '';
-
-  const turkishChars = {
-    'ç': 'c', 'ğ': 'g', 'ı': 'i', 'ö': 'o', 'ş': 's', 'ü': 'u',
-    'Ç': 'C', 'Ğ': 'G', 'İ': 'I', 'Ö': 'O', 'Ş': 'S', 'Ü': 'U'
-  };
-
-  const slug = text
-    .replace(/[çğıöşüÇĞİÖŞÜ]/g, letter => turkishChars[letter])
+  return text
+    .replace(/[çğıöşüÇĞİÖŞÜ]/g, letter => TURKISH_CHARS[letter])
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '');
+};
 
+// Film/dizi adresleri mevcut bağlantılarla uyum için "-izle" ile biter.
+// Latin harfi olmayan başlıklarda bile adres parçası boş kalmaz (yönlendirme döngüsü önlenir).
+export const createSlug = (text) => {
+  const slug = slugify(text);
   return slug ? `${slug}-izle` : 'izle';
+};
+
+export const getPersonPath = (person) => {
+  const slug = slugify(person?.name);
+  return `/person/${person.id}${slug ? `/${slug}` : ''}`;
 };
 
 export const getTitle = (item) => item?.title || item?.name || '';

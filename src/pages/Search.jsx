@@ -1,9 +1,10 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { Helmet } from 'react-helmet-async';
 import { FaSearch, FaTimes } from 'react-icons/fa';
 import { useDebounce, useSearch, useTrending } from '../hooks';
 import MovieCard from '../components/UI/MovieCard';
+import Segmented from '../components/UI/Segmented';
+import Seo from '../components/Seo';
 import PersonCard from '../components/UI/PersonCard';
 import Pagination from '../components/UI/Pagination';
 import MediaRow from '../components/UI/MediaRow';
@@ -72,9 +73,7 @@ const Search = () => {
 
   return (
     <>
-      <Helmet>
-        <title>{query ? `“${query}” arama sonuçları - SINEFIX` : 'Ara - SINEFIX'}</title>
-      </Helmet>
+      <Seo title={query ? `“${query}” arama sonuçları` : 'Ara'} noindex />
 
       <div className="page container-custom">
         <form
@@ -118,13 +117,12 @@ const Search = () => {
 
         {query.length >= 2 && (
           <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
-            <div className="segmented">
-              {FILTERS.map(f => (
-                <button key={f.id} type="button" className={filter === f.id ? 'active' : ''} onClick={() => setParam({ type: f.id, page: 1 })}>
-                  {f.label}
-                </button>
-              ))}
-            </div>
+            <Segmented
+              ariaLabel="Sonuç türü"
+              options={FILTERS.map(f => ({ value: f.id, label: f.label }))}
+              value={filter}
+              onChange={(type) => setParam({ type, page: 1 })}
+            />
             <div className="flex items-center gap-2 text-sm text-white/45">
               {isFetching && <Spinner className="!h-4 !w-4" />}
               {data && `${formatNumber(data.total_results)} sonuç`}

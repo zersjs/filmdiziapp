@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Helmet } from 'react-helmet-async';
 import { FaChevronDown, FaSearch } from 'react-icons/fa';
 import { EmptyState } from '../components/UI/States';
+import { StaticSeo } from '../components/Seo';
 
 const FAQ = () => {
   const [activeQuestion, setActiveQuestion] = useState(null);
@@ -67,10 +67,7 @@ const FAQ = () => {
 
   return (
     <>
-      <Helmet>
-        <title>Sıkça Sorulan Sorular - SINEFIX</title>
-        <meta name="description" content="SINEFIX hakkında sıkça sorulan sorular ve cevaplar." />
-      </Helmet>
+      <StaticSeo path="/sss" />
 
       <div className="page container-custom max-w-3xl">
         <h1 className="page-title">Sıkça sorulan sorular</h1>

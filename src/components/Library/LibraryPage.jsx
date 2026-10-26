@@ -1,11 +1,14 @@
 import React, { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Helmet } from 'react-helmet-async';
 import { FaTrash } from 'react-icons/fa';
 import MovieCard from '../UI/MovieCard';
+import Seo from '../Seo';
 import { ConfirmModal } from '../UI/Modal';
 import { EmptyState } from '../UI/States';
 import { useToast } from '../UI/Toast';
+import Segmented from '../UI/Segmented';
+import SlideTransition from '../UI/SlideTransition';
+import { useSlideDirection } from '../../hooks/useSlideDirection';
 
 const FILTERS = [
   { id: 'all', label: 'Tümü' },
@@ -21,15 +24,20 @@ const SORTS = [
 ];
 
 const sorters = {
-  added: (a, b) => (b.addedAt || '').localeCompare(a.addedAt || ''),
+  added: (a, b) => (b.updatedAt || b.addedAt || '').localeCompare(a.updatedAt || a.addedAt || ''),
   rating: (a, b) => (b.vote_average || 0) - (a.vote_average || 0),
   title: (a, b) => (a.title || '').localeCompare(b.title || '', 'tr'),
   year: (a, b) => (b.release_date || '').localeCompare(a.release_date || ''),
 };
 
-const LibraryPage = ({ title, description, icon: Icon, items, onClear, emptyTitle, emptyDescription }) => {
+// renderItem: kartın yerine özel içerik (ör. izlenen bölüm sayısı) göstermek için.
+// summary: başlığın altında kitaplığa özel kısa istatistik.
+const LibraryPage = ({
+  title, description, icon: Icon, items, onClear, emptyTitle, emptyDescription, renderItem, summary, clearLabel = 'Listeyi temizle',
+}) => {
   const { toast } = useToast();
   const [filter, setFilter] = useState('all');
+  const direction = useSlideDirection(filter, FILTERS.map(f => f.id));
   const [sort, setSort] = useState('added');
   const [confirmOpen, setConfirmOpen] = useState(false);
 
@@ -46,9 +54,7 @@ const LibraryPage = ({ title, description, icon: Icon, items, onClear, emptyTitl
 
   return (
     <>
-      <Helmet>
-        <title>{title} - SINEFIX</title>
-      </Helmet>
+      <Seo title={title} noindex />
 
       <div className="page container-custom">
         <header className="mb-6 flex flex-wrap items-end justify-between gap-4">
@@ -58,10 +64,11 @@ const LibraryPage = ({ title, description, icon: Icon, items, onClear, emptyTitl
               {title}
             </h1>
             <p className="page-subtitle">{description}</p>
+            {summary && items.length > 0 && <p className="mt-2 text-sm text-white/60">{summary}</p>}
           </div>
           {items.length > 0 && (
             <button type="button" onClick={() => setConfirmOpen(true)} className="btn btn-ghost btn-sm text-red-300 hover:!text-red-200">
-              <FaTrash className="text-xs" /> Listeyi temizle
+              <FaTrash className="text-xs" /> {clearLabel}
             </button>
           )}
         </header>
@@ -76,27 +83,28 @@ const LibraryPage = ({ title, description, icon: Icon, items, onClear, emptyTitl
         ) : (
           <>
             <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
-              <div className="segmented">
-                {FILTERS.map(f => (
-                  <button key={f.id} type="button" className={filter === f.id ? 'active' : ''} onClick={() => setFilter(f.id)}>
-                    {f.label} <span className="opacity-60">{counts[f.id]}</span>
-                  </button>
-                ))}
-              </div>
+              <Segmented
+                ariaLabel="Tür filtresi"
+                options={FILTERS.map(f => ({ value: f.id, label: f.label, count: counts[f.id] }))}
+                value={filter}
+                onChange={setFilter}
+              />
               <select className="select !h-[40px] !w-auto" value={sort} onChange={(e) => setSort(e.target.value)} aria-label="Sırala">
                 {SORTS.map(s => <option key={s.id} value={s.id}>{s.label}</option>)}
               </select>
             </div>
 
-            {visible.length === 0 ? (
-              <EmptyState title="Bu filtrede içerik yok" />
-            ) : (
-              <div className="media-grid">
-                {visible.map(item => (
-                  <MovieCard key={`${item.media_type}-${item.id}`} item={item} mediaType={item.media_type} showType={filter === 'all'} />
-                ))}
-              </div>
-            )}
+            <SlideTransition id={filter} direction={direction}>
+              {visible.length === 0 ? (
+                <EmptyState title="Bu filtrede içerik yok" />
+              ) : (
+                <div className="media-grid">
+                  {visible.map(item => renderItem
+                    ? renderItem(item)
+                    : <MovieCard key={`${item.media_type}-${item.id}`} item={item} mediaType={item.media_type} showType={filter === 'all'} />)}
+                </div>
+              )}
+            </SlideTransition>
           </>
         )}
       </div>

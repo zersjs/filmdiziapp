@@ -1,10 +1,13 @@
 import React, { memo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { FaStar, FaHeart, FaFilm, FaTv, FaPlay, FaPlus, FaCheck } from 'react-icons/fa';
+import { FaStar, FaHeart, FaFilm, FaTv, FaPlay, FaPlus, FaCheck, FaEye } from 'react-icons/fa';
 import { getImageUrl } from '../../services/tmdb';
-import { getDetailPath, getMediaLabel, getMediaType, getReleaseDate, getTitle, getWatchPath, getYear } from '../../utils/helpers';
+import {
+  daysUntil, getDetailPath, getMediaLabel, getMediaType, getReleaseDate, getTitle, getWatchPath, getYear, relativeDay,
+} from '../../utils/helpers';
 import { useApp } from '../../contexts';
 import { useToast } from './Toast';
+import { pop } from '../../utils/dom';
 
 export const PosterImage = ({ path, alt, className = '', sizes = '(min-width: 1024px) 190px, (min-width: 640px) 25vw, 45vw' }) => {
   const [loaded, setLoaded] = useState(false);
@@ -27,6 +30,14 @@ export const PosterImage = ({ path, alt, className = '', sizes = '(min-width: 10
   );
 };
 
+// Henüz çıkmamış yapımlarda puan yerine ne zaman çıkacağı gösterilir.
+const releaseCountdown = (dateString) => {
+  const days = daysUntil(dateString);
+  if (days === null || days <= 0) return null;
+  if (days <= 30) return days === 1 ? 'Yarın' : `${days} gün kaldı`;
+  return relativeDay(dateString, new Date(), { weekday: false });
+};
+
 const MovieCard = ({ item, mediaType, showType = false, showActions = true }) => {
   const { actions } = useApp();
   const { toast } = useToast();
@@ -35,9 +46,11 @@ const MovieCard = ({ item, mediaType, showType = false, showActions = true }) =>
   const type = getMediaType(item, mediaType);
   const title = getTitle(item);
   const year = getYear(getReleaseDate(item));
-  const rating = item.vote_average > 0 ? item.vote_average.toFixed(1) : null;
+  const countdown = releaseCountdown(getReleaseDate(item));
+  const rating = !countdown && item.vote_average > 0 ? item.vote_average.toFixed(1) : null;
   const isFavorite = actions.isFavorite(item.id, type);
   const inWatchLater = actions.isWatchLater(item.id, type);
+  const watched = type === 'movie' && actions.isWatched(item.id, 'movie');
 
   const stop = (event) => {
     event.preventDefault();
@@ -46,12 +59,14 @@ const MovieCard = ({ item, mediaType, showType = false, showActions = true }) =>
 
   const onFavorite = (event) => {
     stop(event);
+    pop(event.currentTarget);
     const added = actions.toggleFavorite(item, type);
     toast.success(added ? 'Favorilere eklendi' : 'Favorilerden çıkarıldı', 2000);
   };
 
   const onWatchLater = (event) => {
     stop(event);
+    pop(event.currentTarget);
     const added = actions.toggleWatchLater(item, type);
     toast.success(added ? 'İzleme listene eklendi' : 'İzleme listenden çıkarıldı', 2000);
   };
@@ -72,6 +87,8 @@ const MovieCard = ({ item, mediaType, showType = false, showActions = true }) =>
         <div className="mc-shade" />
 
         {showType && <span className="mc-type">{getMediaLabel(type)}</span>}
+        {countdown && <span className="mc-soon">{countdown}</span>}
+        {watched && <span className="mc-watched" title="İzledin"><FaEye /> İzledin</span>}
 
         <span className="mc-play" aria-hidden="true" onClick={onPlay}>
           <FaPlay />
