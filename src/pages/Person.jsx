@@ -6,6 +6,9 @@ import { usePerson } from '../hooks';
 import { personSeo } from '../lib/seo';
 import Seo, { getSiteUrl } from '../components/Seo';
 import MovieCard from '../components/UI/MovieCard';
+import Segmented from '../components/UI/Segmented';
+import SlideTransition from '../components/UI/SlideTransition';
+import { useSlideDirection } from '../hooks/useSlideDirection';
 import MediaRow from '../components/UI/MediaRow';
 import { DetailSkeleton } from '../components/UI/Loading';
 import { EmptyState, ErrorState } from '../components/UI/States';
@@ -51,6 +54,7 @@ const PersonPage = ({ id, slug }) => {
   const [filter, setFilter] = useState('all');
   const [sort, setSort] = useState('date');
   const [limit, setLimit] = useState(PAGE_SIZE);
+  const direction = useSlideDirection(filter, FILTERS.map(f => f.id));
 
   const credits = useMemo(() => {
     if (!person) return [];
@@ -213,21 +217,21 @@ const PersonPage = ({ id, slug }) => {
               <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
                 <h2 className="section-title">Filmografi</h2>
                 <div className="flex flex-wrap gap-2">
-                  <div className="segmented">
-                    {FILTERS.map(f => (
-                      <button key={f.id} type="button" className={filter === f.id ? 'active' : ''} onClick={() => { setFilter(f.id); setLimit(PAGE_SIZE); }}>
-                        {f.label} <span className="opacity-60">{counts[f.id]}</span>
-                      </button>
-                    ))}
-                  </div>
+                  <Segmented
+                    ariaLabel="Yapım türü"
+                    options={FILTERS.map(f => ({ value: f.id, label: f.label, count: counts[f.id] }))}
+                    value={filter}
+                    onChange={(value) => { setFilter(value); setLimit(PAGE_SIZE); }}
+                  />
                   <select className="select !h-[40px] !w-auto" value={sort} onChange={(e) => setSort(e.target.value)} aria-label="Sırala">
                     {SORTS.map(s => <option key={s.id} value={s.id}>{s.label}</option>)}
                   </select>
                 </div>
               </div>
+              <SlideTransition id={filter} direction={direction}>
               {visibleCredits.length ? (
                 <>
-                  <div className="media-grid stagger" key={`${filter}-${sort}`}>
+                  <div className="media-grid stagger">
                     {visibleCredits.slice(0, limit).map(credit => (
                       <MovieCard key={`${credit.media_type}-${credit.id}`} item={credit} showType={filter === 'all'} />
                     ))}
@@ -243,6 +247,7 @@ const PersonPage = ({ id, slug }) => {
               ) : (
                 <EmptyState title="Yapım bulunamadı" />
               )}
+              </SlideTransition>
             </section>
           </div>
         </div>

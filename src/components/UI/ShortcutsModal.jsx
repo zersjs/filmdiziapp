@@ -26,6 +26,7 @@ const GROUPS = [
       [['t'], 'Fragmanı oynat'],
       [['l'], 'İzleme listesine ekle / çıkar'],
       [['f'], 'Favorilere ekle / çıkar'],
+      [['w'], 'Filmi izledim olarak işaretle'],
     ],
   },
   {

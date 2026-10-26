@@ -206,6 +206,7 @@ const Settings = () => {
     { label: 'İzleme listesi', value: state.watchLater.length, to: '/watch-later', icon: FaBookmark },
     { label: 'Favoriler', value: state.favorites.length, to: '/favorites', icon: FaHeart },
     { label: 'Devam edilenler', value: state.continueWatching.length, to: '/', icon: FaPlay },
+    { label: 'İzlenenler', value: state.watched.length, to: '/izlediklerim', icon: FaEye },
   ];
 
   const download = () => {
@@ -242,7 +243,7 @@ const Settings = () => {
         <h1 className="page-title">Kitaplık ve senkronizasyon</h1>
         <p className="page-subtitle">Hesap gerekmez. Listelerin bu tarayıcıda saklanır.</p>
 
-        <div className="mt-6 grid grid-cols-3 gap-2 sm:gap-3">
+        <div className="mt-6 grid grid-cols-2 gap-2 sm:grid-cols-4 sm:gap-3">
           {stats.map(({ label, value, to, icon: Icon }) => (
             <Link key={label} to={to} className="surface p-3 hover:border-white/15 sm:p-4">
               <Icon className="text-sm text-white/40" />
@@ -272,7 +273,7 @@ const Settings = () => {
             </div>
           </Section>
 
-          <Section title="Verileri temizle" description="İzleme listesi, favoriler ve devam edilenler silinir. Senkronizasyon açıksa diğer cihazlardan da silinir.">
+          <Section title="Verileri temizle" description="İzleme listesi, favoriler, devam edilenler ve izlenenler silinir. Senkronizasyon açıksa diğer cihazlardan da silinir.">
             <button type="button" className="btn btn-danger btn-sm" onClick={() => setConfirmClear(true)}>
               <FaTrash className="text-xs" /> Tüm kitaplığı temizle
             </button>

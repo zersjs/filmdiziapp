@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest';
-import { daysUntil, getPersonPath, isGenericEpisodeName, relativeDay, slugify } from '../helpers';
+import { daysUntil, getPersonPath, isGenericEpisodeName, relativeDay, slugify, timeAgo } from '../helpers';
 import { routeKey } from '../dom';
 import { formatTimeAt, locativeSuffix } from '../../components/Detail/AiringInfo';
 
@@ -55,4 +55,15 @@ describe('adres yardımcıları', () => {
 test('isGenericEpisodeName', () => {
   ['Bölüm 5', '823. Bölüm', 'Episode 12', '', undefined].forEach(name => expect(isGenericEpisodeName(name)).toBe(true));
   ['Pilot', 'Ölü Arının İğnesi'].forEach(name => expect(isGenericEpisodeName(name)).toBe(false));
+});
+
+test('timeAgo', () => {
+  const at = new Date(2026, 9, 22, 12, 0);
+  expect(timeAgo(new Date(2026, 9, 22, 11, 59, 40).toISOString(), at)).toBe('az önce');
+  expect(timeAgo(new Date(2026, 9, 22, 11, 15).toISOString(), at)).toBe('45 dk önce');
+  expect(timeAgo(new Date(2026, 9, 22, 2, 0).toISOString(), at)).toBe('10 sa önce');
+  expect(timeAgo(new Date(2026, 9, 21, 8, 0).toISOString(), at)).toBe('dün');
+  expect(timeAgo(new Date(2026, 9, 18, 8, 0).toISOString(), at)).toBe('4 gün önce');
+  expect(timeAgo(new Date(2026, 8, 1).toISOString(), at)).toBe('1 Eyl');
+  expect(timeAgo('', at)).toBe('');
 });

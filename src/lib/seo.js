@@ -12,7 +12,7 @@ export const DEFAULT_DESCRIPTION =
 export const DEFAULT_IMAGE_PATH = '/og-image.png';
 
 // İndekslenmemesi gereken (ince/kişisel/üçüncü taraf içerikli) sayfalar
-export const NOINDEX_PREFIXES = ['/watch/', '/search', '/favorites', '/watch-later', '/ayarlar'];
+export const NOINDEX_PREFIXES = ['/watch/', '/search', '/favorites', '/watch-later', '/izlediklerim', '/ayarlar'];
 
 export const STATIC_PAGES = {
   '/': { title: null, description: DEFAULT_DESCRIPTION },

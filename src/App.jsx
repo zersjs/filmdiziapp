@@ -20,6 +20,7 @@ const Person = lazy(() => import('./pages/Person'));
 const Genre = lazy(() => import('./pages/Genre'));
 const Favorites = lazy(() => import('./pages/Favorites'));
 const WatchLater = lazy(() => import('./pages/WatchLater'));
+const Watched = lazy(() => import('./pages/Watched'));
 const Contact = lazy(() => import('./pages/Contact'));
 const PrivacyPolicy = lazy(() => import('./pages/PrivacyPolicy'));
 const Terms = lazy(() => import('./pages/Terms'));
@@ -75,6 +76,7 @@ const AppRoutes = () => {
               <Route path="/genre/:type/:id" element={<Genre />} />
               <Route path="/favorites" element={<Favorites />} />
               <Route path="/watch-later" element={<WatchLater />} />
+              <Route path="/izlediklerim" element={<Watched />} />
               <Route path="/iletisim" element={<Contact />} />
               <Route path="/gizlilik-politikasi" element={<PrivacyPolicy />} />
               <Route path="/kullanim-kosullari" element={<Terms />} />

@@ -88,6 +88,7 @@ export const buildRobots = (siteUrl) => [
   'Disallow: /ayarlar',
   'Disallow: /favorites',
   'Disallow: /watch-later',
+  'Disallow: /izlediklerim',
   '',
   `Sitemap: ${absoluteUrl(siteUrl, '/sitemap.xml')}`,
   '',

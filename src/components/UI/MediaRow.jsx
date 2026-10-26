@@ -30,7 +30,10 @@ const useReveal = () => {
 
 // Yatay kaydırmalı içerik satırı. Kaydırıcı ekran kenarına kadar uzanır,
 // ilk kart ise sayfa kapsayıcısıyla hizalı başlar.
-export const Row = ({ title, icon, link, linkLabel = 'Tümü', actions, loading, skeleton = 'poster', children }) => {
+// contentKey/contentDirection: içerik değişince (ör. Bugün → Bu hafta) kartlar o yönden kayarak gelir.
+export const Row = ({
+  title, icon, link, linkLabel = 'Tümü', actions, loading, skeleton = 'poster', contentKey, contentDirection = 1, children,
+}) => {
   const scrollerRef = useRef(null);
   const [revealRef, revealClass] = useReveal();
   const [edges, setEdges] = useState({ start: true, end: false });
@@ -81,7 +84,12 @@ export const Row = ({ title, icon, link, linkLabel = 'Tümü', actions, loading,
       {loading ? (
         <RowSkeleton variant={skeleton} />
       ) : (
-        <div className="row-scroller" ref={scrollerRef} onScroll={updateEdges}>
+        <div
+          key={contentKey}
+          className={`row-scroller ${contentKey !== undefined ? `slide-in-${contentDirection > 0 ? 'next' : 'prev'}` : ''}`}
+          ref={scrollerRef}
+          onScroll={updateEdges}
+        >
           {children}
         </div>
       )}

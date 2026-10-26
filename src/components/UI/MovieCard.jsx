@@ -1,6 +1,6 @@
 import React, { memo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { FaStar, FaHeart, FaFilm, FaTv, FaPlay, FaPlus, FaCheck } from 'react-icons/fa';
+import { FaStar, FaHeart, FaFilm, FaTv, FaPlay, FaPlus, FaCheck, FaEye } from 'react-icons/fa';
 import { getImageUrl } from '../../services/tmdb';
 import {
   daysUntil, getDetailPath, getMediaLabel, getMediaType, getReleaseDate, getTitle, getWatchPath, getYear, relativeDay,
@@ -50,6 +50,7 @@ const MovieCard = ({ item, mediaType, showType = false, showActions = true }) =>
   const rating = !countdown && item.vote_average > 0 ? item.vote_average.toFixed(1) : null;
   const isFavorite = actions.isFavorite(item.id, type);
   const inWatchLater = actions.isWatchLater(item.id, type);
+  const watched = type === 'movie' && actions.isWatched(item.id, 'movie');
 
   const stop = (event) => {
     event.preventDefault();
@@ -87,6 +88,7 @@ const MovieCard = ({ item, mediaType, showType = false, showActions = true }) =>
 
         {showType && <span className="mc-type">{getMediaLabel(type)}</span>}
         {countdown && <span className="mc-soon">{countdown}</span>}
+        {watched && <span className="mc-watched" title="İzledin"><FaEye /> İzledin</span>}
 
         <span className="mc-play" aria-hidden="true" onClick={onPlay}>
           <FaPlay />

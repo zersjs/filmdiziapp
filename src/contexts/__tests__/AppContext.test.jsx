@@ -33,6 +33,38 @@ describe('libraryReducer', () => {
 describe('AppProvider (yerel)', () => {
   beforeEach(() => window.localStorage.clear());
 
+  test('bölüm işaretleme, öncekileri işaretleme ve eski kapanışla geri alma', () => {
+    const tv = { ...show, seasons: [{ season_number: 1, episode_count: 5 }] };
+    const { result } = renderHook(() => useApp(), { wrapper });
+
+    act(() => {
+      expect(result.current.actions.toggleEpisodeWatched(tv, 1, 3)).toBe(true);
+    });
+    // Bildirimdeki eylemler, işaretlemeden önceki "actions" kapanışıyla çağrılır
+    const staleActions = result.current.actions;
+    act(() => {
+      staleActions.setEpisodesWatched(tv, [{ season: 1, episode: 1 }, { season: 1, episode: 2 }], true);
+    });
+    expect([...result.current.actions.getWatchedEpisodes(1396)]).toEqual(['1x1', '1x2', '1x3']);
+    expect(JSON.parse(window.localStorage.getItem('watched'))[0]).toMatchObject({ id: 1396, media_type: 'tv', episodes: ['1x1', '1x2', '1x3'] });
+
+    act(() => {
+      staleActions.setEpisodesWatched(tv, [{ season: 1, episode: 1 }, { season: 1, episode: 2 }, { season: 1, episode: 3 }], false);
+    });
+    expect(result.current.state.watched).toHaveLength(0);
+    expect(result.current.state.removed.watched['tv-1396']).toBeTruthy();
+  });
+
+  test('film izlendi işareti', () => {
+    const { result } = renderHook(() => useApp(), { wrapper });
+    act(() => {
+      expect(result.current.actions.toggleWatched(movie, 'movie')).toBe(true);
+    });
+    expect(result.current.actions.isWatched(550, 'movie')).toBe(true);
+    act(() => result.current.actions.removeWatched(550, 'movie'));
+    expect(result.current.actions.isWatched(550, 'movie')).toBe(false);
+  });
+
   test('favori ekleme/çıkarma ve localStorage kalıcılığı', () => {
     const { result } = renderHook(() => useApp(), { wrapper });
 

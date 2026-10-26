@@ -1,7 +1,7 @@
 import React from 'react';
 import { createPortal } from 'react-dom';
 import { Link, NavLink } from 'react-router-dom';
-import { FaHeart, FaBookmark, FaSearch, FaCog, FaMagic } from 'react-icons/fa';
+import { FaHeart, FaBookmark, FaSearch, FaCog, FaMagic, FaEye } from 'react-icons/fa';
 import { useApp } from '../../contexts';
 import { useBodyScrollLock, useEscapeKey } from '../UI/Modal';
 
@@ -37,6 +37,11 @@ const MobileMenu = ({ isOpen, onClose }) => {
           <FaHeart />
           <span className="flex-1">Favorilerim</span>
           {state.favorites.length > 0 && <span className="text-sm text-white/40">{state.favorites.length}</span>}
+        </NavLink>
+        <NavLink to="/izlediklerim" className={itemClass} onClick={onClose}>
+          <FaEye />
+          <span className="flex-1">İzlediklerim</span>
+          {state.watched.length > 0 && <span className="text-sm text-white/40">{state.watched.length}</span>}
         </NavLink>
         <NavLink to="/ayarlar" className={itemClass} onClick={onClose}>
           <FaCog />

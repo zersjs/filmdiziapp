@@ -51,6 +51,25 @@ export const relativeDay = (dateString, now = new Date(), { weekday = true } = {
   });
 };
 
+// "az önce", "5 dk önce", "3 sa önce", "dün", "4 gün önce" ya da "12 Eki"
+export const timeAgo = (value, now = new Date()) => {
+  const date = toDate(value);
+  if (!date) return '';
+  const minutes = Math.floor((now - date) / 60000);
+  if (minutes < 1) return 'az önce';
+  if (minutes < 60) return `${minutes} dk önce`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours} sa önce`;
+  const days = Math.round((startOfDay(now) - startOfDay(date)) / 86400000);
+  if (days <= 1) return 'dün';
+  if (days < 7) return `${days} gün önce`;
+  return date.toLocaleDateString('tr-TR', {
+    day: 'numeric',
+    month: 'short',
+    ...(date.getFullYear() !== now.getFullYear() ? { year: 'numeric' } : {}),
+  });
+};
+
 // TMDB'de adı girilmemiş bölümler "Bölüm 5", "5. Bölüm" ya da "Episode 5" olarak gelir.
 export const isGenericEpisodeName = (name) =>
   !name || /^(episode|bölüm)\s*\d+$|^\d+\.\s*bölüm$/i.test(name.trim());

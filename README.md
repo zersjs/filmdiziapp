@@ -5,10 +5,23 @@ tarayıcıda saklanır, istenirse tek bir Vercel fonksiyonu üzerinden cihazlar 
 
 ## Özellikler
 
-- **Ana sayfa:** dönen öne çıkanlar, trendler (bugün / bu hafta), popüler ve en yüksek puanlı film/dizi satırları,
+- **Üst başlık:** tüm ekranlarda sabit; görselli sayfalarda saydam, kaydırınca dolar. Masaüstünde seçili/üzerinde
+  durulan bağlantının arkasında **kayan kutu**, Filmler/Diziler için açılır menü (hızlı listeler, tüm türler,
+  Türkiye'deki platformlar), arama kutusu (Ctrl/⌘ K) ve **Kitaplığım** paneli (sayılar, senkron durumu, kaldığın
+  yerler). Mobilde aşağı kaydırınca gizlenir, yukarı kaydırınca geri gelir; alt menüde de kayan gösterge var.
+- **Ana sayfa:** ilerleme çubuklu öne çıkanlar (çubuk dolunca sonraki slayt; üzerine gelince/odaktayken durur,
+  yöne göre kayan geçiş, kaydırma ve ←/→), trendler (bugün / bu hafta), popüler ve en yüksek puanlı satırlar,
   kitaplıktaki dizilerin **yeni ve yaklaşan bölümleri** ("Takip ettiklerinde yeni bölümler")
 - **Filmler / Diziler:** kalıcı tür adresleri (`/movies/genre/korku`), sıralama, yıl, puan ve **platform** filtresi
   (Netflix, Prime Video, Disney+… Türkiye kataloğu); filtreler ve sayfa numarası URL'de tutulur
+- **Sekmeler ve segmentler:** seçili sekmenin arkasındaki kutu yeni sekmeye kayar; içerik yöne göre sağa/sola
+  kayarak değişir (eski panel bir yana çıkar, yenisi diğer yandan gelir). Dokunmatikte sağa/sola kaydırarak,
+  klavyede ok tuşlarıyla sekme değiştirilir. Detay görseli ekrandan çıkınca sekme çubuğunda küçük afiş, başlık
+  ve "İzle" düğmesi belirir.
+- **İzleme takibi:** filmlerde "İzledim", dizilerde bölüm bazında onay işaretleri; sezon ilerleme çubuğu, "Sezonu
+  izlendi işaretle", atlanan bölümler için "Önceki N bölümü de işaretle" önerisi, "Sonraki bölüm"e geçince mevcut
+  bölümün otomatik işaretlenmesi (geri alınabilir). Detaydaki İzle düğmesi **sıradaki bölümü** gösterir; izlenenler
+  `/izlediklerim` sayfasında listelenir ve senkronizasyonla diğer cihazlara gider.
 - **Detay sayfası:** özet, **Türkiye'de nerede izlenir** (abonelik / kiralık / satın alma), filmlerde
   "şimdi başlarsan 23.41'de biter", dizilerde bir sonraki bölümün tarihi, serinin diğer filmleri, oyuncular,
   sezon/bölüm listesi, videolar ve görseller, TMDB incelemeleri, fragman
@@ -18,12 +31,13 @@ tarayıcıda saklanır, istenirse tek bir Vercel fonksiyonu üzerinden cihazlar 
 - **İzleme sayfası:** kaynak seçimi (tercih hatırlanır), önceki/sonraki bölüm, sezon değiştirme
 - **Kitaplık:** favoriler, izleme listesi, kaldığın bölümden "izlemeye devam et"
 - **Arama:** Ctrl+K / `/` ile hızlı arama, son aramalar (yalnızca bu cihazda), film/dizi/kişi filtresiyle tam arama sayfası
-- **Klavye:** `?` kısayol listesi; `g` ardından `h f d s n l` ile sayfalar arası geçiş; detayda `t` fragman, `l` liste, `f` favori
+- **Klavye:** `?` kısayol listesi; `g` ardından `h f d s n l` ile sayfalar arası geçiş; detayda `t` fragman, `l` liste,
+  `f` favori, `w` izledim (film); sekmelerde ←/→, Home/End
 - **Sahneler:** dikey kaydırmalı fragman akışı (ayrıntılar aşağıda)
 - **Kitaplık ve senkronizasyon:** hesapsız; isteğe bağlı senkron koduyla cihazlar arası eşitleme, JSON yedek/geri yükleme
 
-Arayüz telefon, tablet ve masaüstü için ayrı ayrı düzenlenmiştir: masaüstünde sol menü, daha küçük ekranlarda
-üst bar + alt menü kullanılır; dokunmatik cihazlarda kart aksiyonları her zaman görünür.
+Arayüz telefon, tablet ve masaüstü için ayrı ayrı düzenlenmiştir: tüm boyutlarda üst başlık, 1024 px altında ek
+olarak alt menü kullanılır; dokunmatik cihazlarda kart aksiyonları her zaman görünür.
 
 Animasyonlar (sayfa geçişi, kartların sırayla belirmesi, ekrana giren satırlar, hero'da yavaş yakınlaşma, kayan
 sekme çizgisi, favori/liste "pop" geri bildirimi, öneri kartlarının karıştırılması) işletim sisteminin
@@ -58,7 +72,8 @@ Vercel Functions + Upstash Redis (isteğe bağlı senkronizasyon), Vitest.
 
 ## Veri saklama ve senkronizasyon
 
-- **Varsayılan:** favoriler, izleme listesi ve "izlemeye devam et" yalnızca `localStorage`'da tutulur. Sunucu gerekmez.
+- **Varsayılan:** favoriler, izleme listesi, "izlemeye devam et" ve izlenenler (filmler + dizi bölümleri) yalnızca
+  `localStorage`'da tutulur. Sunucu gerekmez.
 - **Cihazlar arası eşitleme (isteğe bağlı):** Ayarlar sayfası 125 bitlik rastgele bir *senkron kodu* üretir.
   `api/library.js` bu kodu `Authorization: Bearer` başlığında alır, **SHA-256 özetini** anahtar olarak kullanır
   (kod sunucuda saklanmaz) ve veriyi Upstash Redis'e yazar.
@@ -120,11 +135,11 @@ npm run dev            # http://localhost:3000
 api/            Vercel Functions: library (senkronizasyon), render (sayfa HTML'i), sitemap, robots
 server/         Sunucu tarafı: kitaplık handler'ı ve deposu, render, sitemap, TMDB istemcisi
 src/
-  components/   Layout, UI (kart, satır, modal, toast…), Detail, Library, Shorts
+  components/   Layout (SiteHeader, alt menü), UI (kart, satır, Segmented, SlideTransition, toast…), Detail, Library, Shorts
   contexts/     AppContext (kitaplık + senkronizasyon durumu)
-  hooks/        useTmdb (React Query), useShortsFeed, useDebounce, useMediaQuery
+  hooks/        useTmdb (React Query), useShortsFeed, useIndicator (kayan kutu), useSwipe, useSlideDirection, …
   lib/          istemci ve sunucu ortak: library (kitaplık modeli), seo (etiket + JSON-LD), genres (tür adresleri),
-                airing (yeni bölüm takibi), tmdbConfig
+                airing (yeni bölüm takibi), episodes (bölüm sırası, ilerleme, sıradaki bölüm), tmdbConfig
   pages/        Rota başına bir sayfa; MediaDetail film ve dizi detayını ortak işler
   services/     tmdb, browse, recommend (Ne izlesem?), shorts (akış motoru), youtube, sync, player
   utils/        biçimlendirme ve yol yardımcıları

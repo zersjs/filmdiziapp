@@ -1,14 +1,17 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
-import { FaArrowLeft, FaChevronLeft, FaChevronRight, FaStar, FaInfoCircle } from 'react-icons/fa';
+import { FaArrowLeft, FaChevronLeft, FaChevronRight, FaStar, FaInfoCircle, FaCheck, FaEye } from 'react-icons/fa';
 import { getImageUrl } from '../services/tmdb';
 import { playerService } from '../services/player';
 import { useDetail, useSeason } from '../hooks';
 import { useApp } from '../contexts';
 import Seo from '../components/Seo';
+import Segmented from '../components/UI/Segmented';
 import EpisodeList, { SeasonSelect, orderSeasons } from '../components/Detail/EpisodeList';
 import { Spinner } from '../components/UI/Loading';
 import { EmptyState, ErrorState } from '../components/UI/States';
+import { useToast } from '../components/UI/Toast';
+import { pop } from '../utils/dom';
 import {
   formatDate, formatRuntime, getDetailPath, getMediaLabel, getReleaseDate, getTitle, getWatchPath, getYear, isFutureDate,
 } from '../utils/helpers';
@@ -47,6 +50,7 @@ const Watch = () => {
   const isTv = type === 'tv';
   const { data: media, isLoading, isError, error, refetch } = useDetail(type, id);
   const { actions } = useApp();
+  const { toast } = useToast();
   const addContinueWatching = useRef(actions.addContinueWatching);
   addContinueWatching.current = actions.addContinueWatching;
 
@@ -120,6 +124,30 @@ const Watch = () => {
     ? `${season}. Sezon · ${episode}. Bölüm${currentEpisode?.name ? ` · ${currentEpisode.name}` : ''}`
     : [getYear(media.release_date), formatRuntime(media.runtime)].filter(Boolean).join(' · ');
   const overview = (isTv && currentEpisode?.overview) || media.overview;
+  const watchedNow = isTv ? actions.isEpisodeWatched(media.id, season, episode) : actions.isWatched(media.id, 'movie');
+  const watchedEpisodes = isTv ? actions.getWatchedEpisodes(media.id) : null;
+
+  const toggleWatchedNow = (event) => {
+    pop(event.currentTarget);
+    if (isTv) {
+      const marked = actions.toggleEpisodeWatched(media, season, episode);
+      toast.success(marked ? `S${season}·B${episode} izlendi` : 'İzlendi işareti kaldırıldı', 2000);
+    } else {
+      const marked = actions.toggleWatched(media, 'movie');
+      toast.success(marked ? 'İzlediklerine eklendi' : 'İzlediklerinden çıkarıldı', 2000);
+    }
+  };
+
+  // "Sonraki bölüm"e geçmek, bu bölümün izlendiği anlamına gelir.
+  const markCurrentAndContinue = () => {
+    if (!actions.isEpisodeWatched(media.id, season, episode)) {
+      actions.setEpisodesWatched(media, [{ season, episode }], true);
+      toast.success(`S${season}·B${episode} izlendi olarak işaretlendi`, 2500, {
+        label: 'Geri al',
+        onClick: () => actions.setEpisodesWatched(media, [{ season, episode }], false),
+      });
+    }
+  };
 
   return (
     <>
@@ -155,13 +183,12 @@ const Watch = () => {
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div className="flex items-center gap-3">
                 <span className="text-xs font-semibold text-white/40">Kaynak</span>
-                <div className="segmented">
-                  {sources.map((s, i) => (
-                    <button key={s.provider} type="button" className={s.provider === source?.provider ? 'active' : ''} onClick={() => chooseProvider(s.provider)}>
-                      {i + 1}. {s.name}
-                    </button>
-                  ))}
-                </div>
+                <Segmented
+                  ariaLabel="Oynatıcı kaynağı"
+                  options={sources.map((s, i) => ({ value: s.provider, label: `${i + 1}. ${s.name}` }))}
+                  value={source?.provider}
+                  onChange={chooseProvider}
+                />
               </div>
 
               {isTv && (
@@ -178,6 +205,7 @@ const Watch = () => {
                     to={next ? getWatchPath(media, 'tv', next) : '#'}
                     className={`btn btn-primary btn-sm flex-1 sm:flex-none ${next ? '' : 'pointer-events-none opacity-40'}`}
                     aria-disabled={!next}
+                    onClick={() => next && markCurrentAndContinue()}
                     replace
                   >
                     Sonraki bölüm <FaChevronRight className="text-[10px]" />
@@ -200,10 +228,21 @@ const Watch = () => {
                     className="hidden aspect-video w-40 flex-shrink-0 rounded-lg object-cover sm:block"
                   />
                 )}
-                <div className="min-w-0">
-                  <h2 className="font-bold">
-                    {isTv ? currentEpisode?.name || `${episode}. Bölüm` : title}
-                  </h2>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-start justify-between gap-3">
+                    <h2 className="font-bold">
+                      {isTv ? currentEpisode?.name || `${episode}. Bölüm` : title}
+                    </h2>
+                    <button
+                      type="button"
+                      onClick={toggleWatchedNow}
+                      className={`btn btn-sm flex-shrink-0 ${watchedNow ? 'btn-primary' : 'btn-secondary'}`}
+                      aria-pressed={watchedNow}
+                    >
+                      {watchedNow ? <FaCheck className="text-[10px]" /> : <FaEye className="text-xs" />}
+                      {watchedNow ? 'İzlendi' : 'İzledim'}
+                    </button>
+                  </div>
                   <div className="meta-row mt-1">
                     {(isTv ? currentEpisode?.vote_average : media.vote_average) > 0 && (
                       <span className="rating">
@@ -223,7 +262,7 @@ const Watch = () => {
 
         <aside className="min-w-0 space-y-6 px-[var(--gutter)] pb-4 sm:px-0">
           {isTv && seasons.length > 0 && (
-            <section className="surface p-3 sm:p-4 lg:sticky lg:top-6">
+            <section className="surface p-3 sm:p-4 lg:sticky lg:top-[calc(var(--sticky-top)+24px)]">
               <div className="mb-3 flex items-center justify-between gap-3">
                 <h2 className="text-sm font-bold">Bölümler</h2>
                 <SeasonSelect
@@ -242,6 +281,11 @@ const Watch = () => {
                   error={seasonQuery.isError}
                   current={episode}
                   getHref={(ep) => getWatchPath(media, 'tv', { season, episode: ep.episode_number })}
+                  isWatched={(ep) => watchedEpisodes.has(`${season}x${ep.episode_number}`)}
+                  onToggleWatched={(ep, event) => {
+                    pop(event?.currentTarget);
+                    actions.toggleEpisodeWatched(media, season, ep.episode_number);
+                  }}
                 />
               </div>
             </section>

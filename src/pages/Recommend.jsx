@@ -162,7 +162,7 @@ const Recommend = () => {
   }, [asked, isLoading, pool.length, candidates.length, page, totalPages]);
 
   const snapshotLibrary = () => new Set(
-    [...state.favorites, ...state.watchLater, ...state.continueWatching].map(item => `${item.media_type}-${item.id}`)
+    [...state.favorites, ...state.watchLater, ...state.continueWatching, ...state.watched].map(item => `${item.media_type}-${item.id}`)
   );
 
   const update = (changes) => {

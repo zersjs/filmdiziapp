@@ -43,6 +43,7 @@ describe('resolveRoute', () => {
     ['/sahneler/dovus-kulubu-movie-550', { kind: 'static', page: '/sahneler' }],
     ['/watch/movie/550/dovus-kulubu-izle', { kind: 'private' }],
     ['/search', { kind: 'private' }],
+    ['/izlediklerim', { kind: 'private' }],
     ['/login', { kind: 'redirect', to: '/ayarlar' }],
     ['/movies/', { kind: 'redirect', to: '/movies' }],
     ['/genre/tv/18', { kind: 'redirect', to: '/series/genre/dram' }],
